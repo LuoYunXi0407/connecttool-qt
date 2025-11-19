@@ -40,8 +40,9 @@ public:
     bool isHost() const { return g_isHost; }
     bool isClient() const { return g_isClient; }
     bool isConnected() const { return g_isConnected; }
-    const std::map<HSteamNetConnection, UserInfo>& getUserMap() const { return userMap; }
     const std::vector<HSteamNetConnection>& getConnections() const { return connections; }
+    int getHostPing() const { return hostPing_; }
+    int getConnectionPing(HSteamNetConnection conn) const;
     HSteamNetConnection getConnection() const { return g_hConnection; }
     ISteamNetworkingSockets* getInterface() const { return m_pInterface; }
 
@@ -81,8 +82,8 @@ private:
 
     // Connections
     std::vector<HSteamNetConnection> connections;
-    std::map<HSteamNetConnection, UserInfo> userMap;
     std::mutex connectionsMutex;
+    int hostPing_;  // Ping to host (for clients) or average ping (for host)
 
     // Connection config
     int g_retryCount;

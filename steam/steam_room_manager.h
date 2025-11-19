@@ -53,6 +53,7 @@ public:
 
     CSteamID getCurrentLobby() const { return currentLobby; }
     const std::vector<CSteamID>& getLobbies() const { return lobbies; }
+    std::vector<CSteamID> getLobbyMembers() const;
 
     void setCurrentLobby(CSteamID lobby) { currentLobby = lobby; }
     void addLobby(CSteamID lobby) { lobbies.push_back(lobby); }

@@ -269,3 +269,18 @@ void SteamRoomManager::stopHosting()
     leaveLobby();
     networkingManager_->getIsHost() = false;
 }
+
+std::vector<CSteamID> SteamRoomManager::getLobbyMembers() const
+{
+    std::vector<CSteamID> members;
+    if (currentLobby != k_steamIDNil)
+    {
+        int numMembers = SteamMatchmaking()->GetNumLobbyMembers(currentLobby);
+        for (int i = 0; i < numMembers; ++i)
+        {
+            CSteamID memberID = SteamMatchmaking()->GetLobbyMemberByIndex(currentLobby, i);
+            members.push_back(memberID);
+        }
+    }
+    return members;
+}

@@ -16,7 +16,7 @@ void SteamNetworkingManager::OnSteamNetConnectionStatusChanged(SteamNetConnectio
 SteamNetworkingManager::SteamNetworkingManager()
     : m_pInterface(nullptr), hListenSock(k_HSteamListenSocket_Invalid), g_isHost(false), g_isClient(false), g_isConnected(false),
       g_hConnection(k_HSteamNetConnection_Invalid),
-      io_context_(nullptr), server_(nullptr), localPort_(nullptr), messageHandler_(nullptr)
+      io_context_(nullptr), server_(nullptr), localPort_(nullptr), messageHandler_(nullptr), hostPing_(0)
 {
     std::cout << "Initialized SteamNetworkingManager" << std::endl;
 }
@@ -156,18 +156,25 @@ void SteamNetworkingManager::stopMessageHandler()
 void SteamNetworkingManager::update()
 {
     std::lock_guard<std::mutex> lock(connectionsMutex);
-    for (auto &pair : userMap)
+    // Update ping to host/client connection
+    if (g_hConnection != k_HSteamNetConnection_Invalid)
     {
-        HSteamNetConnection conn = pair.first;
-        UserInfo &userInfo = pair.second;
-        SteamNetConnectionInfo_t info;
         SteamNetConnectionRealTimeStatus_t status;
-        if (m_pInterface->GetConnectionInfo(conn, &info) && m_pInterface->GetConnectionRealTimeStatus(conn, &status, 0, nullptr))
+        if (m_pInterface->GetConnectionRealTimeStatus(g_hConnection, &status, 0, nullptr))
         {
-            userInfo.ping = status.m_nPing;
-            userInfo.isRelay = (info.m_idPOPRelay != 0);
+            hostPing_ = status.m_nPing;
         }
     }
+}
+
+int SteamNetworkingManager::getConnectionPing(HSteamNetConnection conn) const
+{
+    SteamNetConnectionRealTimeStatus_t status;
+    if (m_pInterface->GetConnectionRealTimeStatus(conn, &status, 0, nullptr))
+    {
+        return status.m_nPing;
+    }
+    return 0;
 }
 
 void SteamNetworkingManager::handleConnectionStatusChanged(SteamNetConnectionStatusChangedCallback_t *pInfo)
@@ -185,17 +192,11 @@ void SteamNetworkingManager::handleConnectionStatusChanged(SteamNetConnectionSta
         g_hConnection = pInfo->m_hConn;
         g_isConnected = true;
         std::cout << "Accepted incoming connection from " << pInfo->m_info.m_identityRemote.GetSteamID().ConvertToUint64() << std::endl;
-        // Add user info
+        // Log connection info
         SteamNetConnectionInfo_t info;
         SteamNetConnectionRealTimeStatus_t status;
         if (m_pInterface->GetConnectionInfo(pInfo->m_hConn, &info) && m_pInterface->GetConnectionRealTimeStatus(pInfo->m_hConn, &status, 0, nullptr))
         {
-            UserInfo userInfo;
-            userInfo.steamID = pInfo->m_info.m_identityRemote.GetSteamID();
-            userInfo.name = SteamFriends()->GetFriendPersonaName(userInfo.steamID);
-            userInfo.ping = status.m_nPing;
-            userInfo.isRelay = (info.m_idPOPRelay != 0);
-            userMap[pInfo->m_hConn] = userInfo;
             std::cout << "Incoming connection details: ping=" << status.m_nPing << "ms, relay=" << (info.m_idPOPRelay != 0 ? "yes" : "no") << std::endl;
         }
     }
@@ -203,17 +204,12 @@ void SteamNetworkingManager::handleConnectionStatusChanged(SteamNetConnectionSta
     {
         g_isConnected = true;
         std::cout << "Connected to host" << std::endl;
-        // Add user info
+        // Log connection info
         SteamNetConnectionInfo_t info;
         SteamNetConnectionRealTimeStatus_t status;
         if (m_pInterface->GetConnectionInfo(pInfo->m_hConn, &info) && m_pInterface->GetConnectionRealTimeStatus(pInfo->m_hConn, &status, 0, nullptr))
         {
-            UserInfo userInfo;
-            userInfo.steamID = pInfo->m_info.m_identityRemote.GetSteamID();
-            userInfo.name = SteamFriends()->GetFriendPersonaName(userInfo.steamID);
-            userInfo.ping = status.m_nPing;
-            userInfo.isRelay = (info.m_idPOPRelay != 0);
-            userMap[pInfo->m_hConn] = userInfo;
+            hostPing_ = status.m_nPing;
             std::cout << "Outgoing connection details: ping=" << status.m_nPing << "ms, relay=" << (info.m_idPOPRelay != 0 ? "yes" : "no") << std::endl;
         }
     }
@@ -227,7 +223,7 @@ void SteamNetworkingManager::handleConnectionStatusChanged(SteamNetConnectionSta
         {
             connections.erase(it);
         }
-        userMap.erase(pInfo->m_hConn);
+        hostPing_ = 0;
         std::cout << "Connection closed" << std::endl;
     }
 }
