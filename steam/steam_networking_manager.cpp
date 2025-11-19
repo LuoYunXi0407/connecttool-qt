@@ -84,37 +84,6 @@ bool SteamNetworkingManager::initialize()
         k_ESteamNetworkingConfig_Int32,
         &allowWithoutAuth);
 
-    // Manually set STUN server list
-    std::string stunServers = "stun.l.google.com:19302,stun1.l.google.com:19302,stun2.l.google.com:19302,stun3.l.google.com:19302,stun4.l.google.com:19302";
-    SteamNetworkingUtils()->SetConfigValue(
-        k_ESteamNetworkingConfig_P2P_STUN_ServerList,
-        k_ESteamNetworkingConfig_Global,
-        0,
-        k_ESteamNetworkingConfig_String,
-        stunServers.c_str());
-
-    // 打印当前配置的 TURN 和 STUN 服务器列表
-    SteamNetworkingUtils()->GetConfigValueInfo(k_ESteamNetworkingConfig_P2P_TURN_ServerList, nullptr, nullptr);
-    char turnServers[4096] = {};
-    ESteamNetworkingConfigDataType turnType;
-    size_t turnServersSize = sizeof(turnServers);
-    ESteamNetworkingGetConfigValueResult turnResult = SteamNetworkingUtils()->GetConfigValue(
-        k_ESteamNetworkingConfig_P2P_TURN_ServerList,
-        k_ESteamNetworkingConfig_Global, 0,
-        &turnType,
-        turnServers, &turnServersSize);
-    std::cout << "[SteamNet] TURN servers: " << turnServers << std::endl;
-
-    char stunServersBuffer[4096] = {};
-    ESteamNetworkingConfigDataType stunType;
-    size_t stunServersSize = sizeof(stunServersBuffer);
-    ESteamNetworkingGetConfigValueResult stunResult = SteamNetworkingUtils()->GetConfigValue(
-        k_ESteamNetworkingConfig_P2P_STUN_ServerList,
-        k_ESteamNetworkingConfig_Global, 0,
-        &stunType,
-        stunServersBuffer, &stunServersSize);
-    std::cout << "[SteamNet] STUN servers: " << stunServersBuffer << std::endl;
-
     // Create callbacks after Steam API init
     roomManager_ = new SteamRoomManager(this);
 
