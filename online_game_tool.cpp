@@ -275,7 +275,7 @@ int main()
     auto getMemberConnectionInfo = [&](const CSteamID &memberID, const CSteamID &hostSteamID) -> std::pair<int, std::string>
     {
         int ping = 0;
-        std::string relayInfo = "N/A";
+        std::string relayInfo = "-";
 
         if (steamManager.isHost())
         {
@@ -350,7 +350,6 @@ int main()
         // Poll events
         glfwPollEvents();
 
-        // Run Steam callbacks
         SteamAPI_RunCallbacks();
 
         // Update Steam networking info
@@ -448,13 +447,13 @@ int main()
                         {
                             auto [ping, relayInfo] = getMemberConnectionInfo(memberID, hostSteamID);
 
-                            if (relayInfo != "N/A")
+                            if (relayInfo != "-")
                             {
                                 ImGui::Text("%d", ping);
                             }
                             else
                             {
-                                ImGui::Text("N/A");
+                                ImGui::Text("-");
                             }
                             ImGui::TableNextColumn();
                             ImGui::Text("%s", relayInfo.c_str());
