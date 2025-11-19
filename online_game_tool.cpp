@@ -344,9 +344,26 @@ int main()
         }
     };
 
+    // Frame rate limiting
+    const double targetFrameTimeForeground = 1.0 / 60.0; // 60 FPS when focused
+    const double targetFrameTimeBackground = 1.0; // 1 FPS when in background
+    double lastFrameTime = glfwGetTime();
+
     // Main loop
     while (!glfwWindowShouldClose(window))
     {
+        // Frame rate control based on window focus
+        bool isFocused = glfwGetWindowAttrib(window, GLFW_FOCUSED);
+        double targetFrameTime = isFocused ? targetFrameTimeForeground : targetFrameTimeBackground;
+        
+        double currentTime = glfwGetTime();
+        double deltaTime = currentTime - lastFrameTime;
+        if (deltaTime < targetFrameTime)
+        {
+            std::this_thread::sleep_for(std::chrono::duration<double>(targetFrameTime - deltaTime));
+        }
+        lastFrameTime = glfwGetTime();
+
         // Poll events
         glfwPollEvents();
 
