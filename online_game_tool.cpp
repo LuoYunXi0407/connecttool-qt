@@ -209,10 +209,11 @@ int main()
         {
             ImGui::Begin("房间状态");
             ImGui::Text("用户列表:");
-            if (ImGui::BeginTable("UserTable", 2, ImGuiTableFlags_Borders | ImGuiTableFlags_RowBg))
+            if (ImGui::BeginTable("UserTable", 3, ImGuiTableFlags_Borders | ImGuiTableFlags_RowBg))
             {
                 ImGui::TableSetupColumn("名称");
                 ImGui::TableSetupColumn("延迟 (ms)");
+                ImGui::TableSetupColumn("连接类型");
                 ImGui::TableHeadersRow();
                 {
                     std::vector<CSteamID> members = roomManager.getLobbyMembers();
@@ -227,10 +228,13 @@ int main()
                         if (memberID == mySteamID)
                         {
                             ImGui::Text("-");
+                            ImGui::TableNextColumn();
+                            ImGui::Text("-");
                         }
                         else
                         {
                             int ping = 0;
+                            std::string relayInfo = "N/A";
                             if (steamManager.isHost())
                             {
                                 // Find connection for this member
@@ -243,6 +247,7 @@ int main()
                                         if (info.m_identityRemote.GetSteamID() == memberID)
                                         {
                                             ping = steamManager.getConnectionPing(conn);
+                                            relayInfo = steamManager.getConnectionRelayInfo(conn);
                                             break;
                                         }
                                     }
@@ -252,8 +257,14 @@ int main()
                             {
                                 // Client shows ping to host
                                 ping = steamManager.getHostPing();
+                                if (steamManager.getConnection() != k_HSteamNetConnection_Invalid)
+                                {
+                                    relayInfo = steamManager.getConnectionRelayInfo(steamManager.getConnection());
+                                }
                             }
                             ImGui::Text("%d", ping);
+                            ImGui::TableNextColumn();
+                            ImGui::Text("%s", relayInfo.c_str());
                         }
                     }
                 }

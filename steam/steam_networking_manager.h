@@ -45,6 +45,7 @@ public:
     int getConnectionPing(HSteamNetConnection conn) const;
     HSteamNetConnection getConnection() const { return g_hConnection; }
     ISteamNetworkingSockets* getInterface() const { return m_pInterface; }
+    std::string getConnectionRelayInfo(HSteamNetConnection conn) const;
 
     // For SteamRoomManager access
     std::unique_ptr<TCPServer>*& getServer() { return server_; }

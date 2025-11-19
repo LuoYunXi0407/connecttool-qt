@@ -211,6 +211,28 @@ int SteamNetworkingManager::getConnectionPing(HSteamNetConnection conn) const
     return 0;
 }
 
+std::string SteamNetworkingManager::getConnectionRelayInfo(HSteamNetConnection conn) const
+{
+    SteamNetConnectionInfo_t info;
+    if (m_pInterface->GetConnectionInfo(conn, &info))
+    {
+        // Check if connection is using relay
+        if (info.m_nFlags & k_nSteamNetworkConnectionInfoFlags_Relayed)
+        {
+            return "中继";
+        }
+        else if (info.m_nFlags & k_nSteamNetworkConnectionInfoFlags_Fast)
+        {
+            return "直连";
+        }
+        else
+        {
+            return "未知";
+        }
+    }
+    return "N/A";
+}
+
 void SteamNetworkingManager::handleConnectionStatusChanged(SteamNetConnectionStatusChangedCallback_t *pInfo)
 {
     std::lock_guard<std::mutex> lock(connectionsMutex);
