@@ -233,7 +233,7 @@ int main()
     }
 
     // Create window
-    GLFWwindow *window = glfwCreateWindow(1280, 720, "在线游戏工具", nullptr, nullptr);
+    GLFWwindow *window = glfwCreateWindow(1280, 720, "在线游戏工具 - 1.0.0", nullptr, nullptr);
     if (!window)
     {
         std::cerr << "Failed to create GLFW window" << std::endl;
