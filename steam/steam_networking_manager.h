@@ -41,6 +41,7 @@ public:
     bool isClient() const { return g_isClient; }
     bool isConnected() const { return g_isConnected; }
     const std::vector<HSteamNetConnection>& getConnections() const { return connections; }
+    std::mutex& getConnectionsMutex() { return connectionsMutex; }
     int getHostPing() const { return hostPing_; }
     int getConnectionPing(HSteamNetConnection conn) const;
     HSteamNetConnection getConnection() const { return g_hConnection; }

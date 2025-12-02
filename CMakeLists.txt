@@ -1,145 +1,99 @@
-cmake_minimum_required(VERSION 3.10)
-project(ConnectTool)
+cmake_minimum_required(VERSION 3.20)
+project(ConnectToolQt LANGUAGES CXX)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-# Find packages
-find_package(OpenGL REQUIRED)
-find_package(glfw3 REQUIRED)
+find_package(Qt6 REQUIRED COMPONENTS Core Gui Qml Quick QuickControls2)
 find_package(Boost REQUIRED)
+find_package(Threads REQUIRED)
 
-# Include directories
-include_directories(${CMAKE_SOURCE_DIR})
-include_directories(${CMAKE_SOURCE_DIR}/imgui)
-include_directories(${CMAKE_SOURCE_DIR}/imgui/backends)
-include_directories(${CMAKE_SOURCE_DIR}/nanoid_cpp/inc)
-include_directories(${CMAKE_SOURCE_DIR}/steamworks/public)
-include_directories(${CMAKE_SOURCE_DIR}/steamworks/public/steam)
-include_directories(${CMAKE_SOURCE_DIR}/net)
+qt_standard_project_setup()
+qt_policy(SET QTP0004 NEW)
+qt_policy(SET QTP0001 NEW)
 
-# Source files
-file(GLOB SOURCES
-    "online_game_tool.cpp"
-    "imgui/*.cpp"
-    "imgui/backends/imgui_impl_glfw.cpp"
-    "imgui/backends/imgui_impl_opengl3.cpp"
-    "net/*.cpp"
-    "steam/*.cpp"
-    "nanoid_cpp/src/nanoid/*.cpp"
-)
+set(STEAMWORKS_PATH_HINT "${CMAKE_SOURCE_DIR}/steamworks" CACHE PATH "Path to the Steamworks SDK (contains public/ and redistributable_bin)")
+set(STEAMWORKS_SDK_DIR "${CMAKE_SOURCE_DIR}/sdk" CACHE PATH "Optional fallback Steamworks SDK path")
 
-# Create executable
-add_executable(ConnectTool ${SOURCES})
+set(_steam_include_hints
+    ${STEAMWORKS_PATH_HINT}/public
+    ${STEAMWORKS_PATH_HINT}/public/steam
+    ${STEAMWORKS_SDK_DIR}/public
+    ${STEAMWORKS_SDK_DIR}/public/steam)
 
-# Determine Steamworks directory location with fallback
-set(STEAMWORKS_DIR "${CMAKE_SOURCE_DIR}/steamworks")
-set(STEAMWORKS_SDK_DIR "${CMAKE_SOURCE_DIR}/sdk")
-
-# Function to find Steam API library with fallback
-function(find_steam_api OUTPUT_VAR PLATFORM_PATH)
-    set(STEAM_API_PATH "${STEAMWORKS_DIR}/redistributable_bin/${PLATFORM_PATH}")
-    set(STEAM_API_SDK_PATH "${STEAMWORKS_SDK_DIR}/redistributable_bin/${PLATFORM_PATH}")
-    
-    if(EXISTS "${STEAM_API_PATH}")
-        set(${OUTPUT_VAR} "${STEAM_API_PATH}" PARENT_SCOPE)
-    elseif(EXISTS "${STEAM_API_SDK_PATH}")
-        set(${OUTPUT_VAR} "${STEAM_API_SDK_PATH}" PARENT_SCOPE)
-        message(STATUS "Using Steam API from sdk directory: ${STEAM_API_SDK_PATH}")
-    else()
-        set(${OUTPUT_VAR} "${STEAM_API_PATH}" PARENT_SCOPE)
-        message(WARNING "Steam API library not found at: ${STEAM_API_PATH} or ${STEAM_API_SDK_PATH}")
-    endif()
-endfunction()
-
-# Platform-specific Steam API linking
+set(_steam_lib_hints)
 if(WIN32)
-    # Windows 64-bit
-    find_steam_api(STEAM_API_LIB "win64/steam_api64.dll")
-    target_link_libraries(ConnectTool
-        glfw
-        OpenGL::GL
-        Boost::headers
-        ${STEAM_API_LIB}
-    )
-    
-    # Copy steam_api64.dll to output directory for runtime
-    add_custom_command(TARGET ConnectTool POST_BUILD
-        COMMAND ${CMAKE_COMMAND} -E copy
-        ${STEAM_API_LIB}
-        $<TARGET_FILE_DIR:ConnectTool>/steam_api64.dll
-    )
-elseif(UNIX AND NOT APPLE)
-    # Linux platforms
-    if(CMAKE_SYSTEM_PROCESSOR MATCHES "x86_64" OR CMAKE_SYSTEM_PROCESSOR MATCHES "amd64")
-        # x86_64 Linux
-        find_steam_api(STEAM_API_LIB "linux64/libsteam_api.so")
-        target_link_libraries(ConnectTool
-            glfw
-            OpenGL::GL
-            Boost::headers
-            ${STEAM_API_LIB}
-        )
-        
-        add_custom_command(TARGET ConnectTool POST_BUILD
-            COMMAND ${CMAKE_COMMAND} -E copy
-            ${STEAM_API_LIB}
-            $<TARGET_FILE_DIR:ConnectTool>/libsteam_api.so
-        )
-    elseif(CMAKE_SYSTEM_PROCESSOR MATCHES "i386" OR CMAKE_SYSTEM_PROCESSOR MATCHES "i686")
-        # x86 32-bit Linux
-        find_steam_api(STEAM_API_LIB "linux32/libsteam_api.so")
-        target_link_libraries(ConnectTool
-            glfw
-            OpenGL::GL
-            Boost::headers
-            ${STEAM_API_LIB}
-        )
-        
-        add_custom_command(TARGET ConnectTool POST_BUILD
-            COMMAND ${CMAKE_COMMAND} -E copy
-            ${STEAM_API_LIB}
-            $<TARGET_FILE_DIR:ConnectTool>/libsteam_api.so
-        )
-    elseif(CMAKE_SYSTEM_PROCESSOR MATCHES "aarch64" OR CMAKE_SYSTEM_PROCESSOR MATCHES "arm64")
-        # ARM64 Linux
-        find_steam_api(STEAM_API_LIB "linuxarm64/libsteam_api.so")
-        target_link_libraries(ConnectTool
-            glfw
-            OpenGL::GL
-            Boost::headers
-            ${STEAM_API_LIB}
-        )
-        
-        add_custom_command(TARGET ConnectTool POST_BUILD
-            COMMAND ${CMAKE_COMMAND} -E copy
-            ${STEAM_API_LIB}
-            $<TARGET_FILE_DIR:ConnectTool>/libsteam_api.so
-        )
-    else()
-        message(WARNING "Unsupported Linux architecture: ${CMAKE_SYSTEM_PROCESSOR}")
-    endif()
+    list(APPEND _steam_lib_hints
+        ${STEAMWORKS_PATH_HINT}/redistributable_bin/win64
+        ${STEAMWORKS_SDK_DIR}/redistributable_bin/win64)
 elseif(APPLE)
-    # macOS
-    find_steam_api(STEAM_API_LIB "osx/libsteam_api.dylib")
-    target_link_libraries(ConnectTool
-        glfw
-        OpenGL::GL
-        Boost::headers
-        ${STEAM_API_LIB}
-    )
-    
-    # Copy libsteam_api.dylib to output directory for runtime
-    add_custom_command(TARGET ConnectTool POST_BUILD
-        COMMAND ${CMAKE_COMMAND} -E copy
-        ${STEAM_API_LIB}
-        $<TARGET_FILE_DIR:ConnectTool>/libsteam_api.dylib
-    )
+    list(APPEND _steam_lib_hints
+        ${STEAMWORKS_PATH_HINT}/redistributable_bin/osx
+        ${STEAMWORKS_SDK_DIR}/redistributable_bin/osx)
+elseif(CMAKE_SYSTEM_PROCESSOR MATCHES "aarch64|arm64")
+    list(APPEND _steam_lib_hints
+        ${STEAMWORKS_PATH_HINT}/redistributable_bin/linuxarm64
+        ${STEAMWORKS_SDK_DIR}/redistributable_bin/linuxarm64)
 else()
-    message(WARNING "Unsupported platform")
+    list(APPEND _steam_lib_hints
+        ${STEAMWORKS_PATH_HINT}/redistributable_bin/linux64
+        ${STEAMWORKS_SDK_DIR}/redistributable_bin/linux64)
 endif()
 
-# Create steam_id.txt file with content 480
-add_custom_command(TARGET ConnectTool POST_BUILD
-    COMMAND ${CMAKE_COMMAND} -E echo "480" > $<TARGET_FILE_DIR:ConnectTool>/steam_appid.txt
-)
+find_path(STEAMWORKS_INCLUDE_DIR steam_api.h PATHS ${_steam_include_hints})
+find_library(STEAMWORKS_LIBRARY NAMES steam_api steam_api64 PATHS ${_steam_lib_hints})
+
+if(NOT STEAMWORKS_INCLUDE_DIR OR NOT STEAMWORKS_LIBRARY)
+    message(FATAL_ERROR "Steamworks SDK not found. Set STEAMWORKS_PATH_HINT or place the SDK in ./steamworks or ./sdk.")
+endif()
+
+add_executable(connecttool-qt
+    src/main.cpp
+    src/backend.cpp
+    src/friends_model.cpp
+    net/multiplex_manager.cpp
+    net/tcp_server.cpp
+    steam/steam_message_handler.cpp
+    steam/steam_networking_manager.cpp
+    steam/steam_room_manager.cpp
+    steam/steam_utils.cpp)
+
+target_include_directories(connecttool-qt PRIVATE
+    src
+    net
+    steam
+    ${STEAMWORKS_INCLUDE_DIR})
+
+target_link_libraries(connecttool-qt PRIVATE
+    Qt6::Core
+    Qt6::Gui
+    Qt6::Qml
+    Qt6::Quick
+    Qt6::QuickControls2
+    Boost::headers
+    Threads::Threads
+    ${STEAMWORKS_LIBRARY})
+
+# Ensure the Steam redistributable is next to the executable at build and
+# install time, and make sure the loader can find it on macOS.
+add_custom_command(TARGET connecttool-qt POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E copy_if_different
+            ${STEAMWORKS_LIBRARY}
+            $<TARGET_FILE_DIR:connecttool-qt>)
+
+if(APPLE)
+    set_target_properties(connecttool-qt PROPERTIES
+        BUILD_RPATH "@loader_path"
+        INSTALL_RPATH "@loader_path;@loader_path/../lib")
+endif()
+
+qt_add_qml_module(connecttool-qt
+    URI ConnectTool
+    VERSION 1.0
+    QML_FILES
+        qml/ConnectTool/Main.qml)
+
+file(WRITE ${CMAKE_CURRENT_BINARY_DIR}/steam_appid.txt "480\n")
+install(FILES ${CMAKE_CURRENT_BINARY_DIR}/steam_appid.txt DESTINATION bin)
+install(TARGETS connecttool-qt RUNTIME DESTINATION bin)
+install(FILES ${STEAMWORKS_LIBRARY} DESTINATION bin OPTIONAL)

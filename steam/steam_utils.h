@@ -1,9 +1,16 @@
 #pragma once
-#include <vector>
 #include <string>
+#include <vector>
 #include <steam_api.h>
 
 class SteamUtils {
 public:
-    static std::vector<std::pair<CSteamID, std::string>> getFriendsList();
+    struct FriendInfo
+    {
+        CSteamID id;
+        std::string name;
+        std::string avatarDataUrl;
+    };
+
+    static std::vector<FriendInfo> getFriendsList();
 };

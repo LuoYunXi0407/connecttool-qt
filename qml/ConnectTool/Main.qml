@@ -1,0 +1,458 @@
+import QtQuick
+import QtQuick.Controls
+import QtQuick.Controls.Material
+import QtQuick.Layouts
+import Qt5Compat.GraphicalEffects
+
+ApplicationWindow {
+    id: win
+    width: 900
+    height: 640
+    minimumWidth: 900
+    minimumHeight: 640
+    visible: true
+    title: qsTr("ConnectTool · Steam P2P")
+
+    Material.theme: Material.Dark
+    Material.primary: "#23c9a9"
+    Material.accent: "#2ad2ff"
+
+    property string friendFilter: ""
+    property string lastError: ""
+
+    background: Rectangle {
+        anchors.fill: parent
+        gradient: Gradient {
+            orientation: Gradient.Vertical
+            GradientStop { position: 0.0; color: "#0f1725" }
+            GradientStop { position: 1.0; color: "#0c111b" }
+        }
+    }
+
+    Connections {
+        target: backend
+        function onErrorMessage(msg) {
+            win.lastError = msg
+            errorTimer.restart()
+        }
+    }
+
+    Timer {
+        id: errorTimer
+        interval: 4200
+        repeat: false
+        onTriggered: win.lastError = ""
+    }
+
+    ColumnLayout {
+        anchors.fill: parent
+        anchors.margins: 24
+        spacing: 16
+
+        RowLayout {
+            Layout.fillWidth: true
+            spacing: 16
+
+            Label {
+                text: qsTr("ConnectTool")
+                font.pixelSize: 28
+                font.family: "Fira Sans"
+                color: "#e8f5ff"
+            }
+
+            Rectangle {
+                radius: 12
+                Layout.fillWidth: true
+                implicitHeight: 56
+                color: "#161f2e"
+                border.color: "#243149"
+                border.width: 1
+
+                RowLayout {
+                    anchors.fill: parent
+                    anchors.margins: 14
+                    spacing: 12
+                    Label {
+                        text: backend.status
+                        wrapMode: Text.Wrap
+                        Layout.fillWidth: true
+                        color: "#dce7ff"
+                        font.pixelSize: 16
+                    }
+                    Rectangle {
+                        radius: 8
+                        color: backend.steamReady ? "#2dd6c1" : "#ef476f"
+                        implicitWidth: 12
+                        implicitHeight: 12
+                        Layout.alignment: Qt.AlignVCenter
+                    }
+                    Label {
+                        text: backend.steamReady ? qsTr("Steam 已就绪") : qsTr("Steam 未登录")
+                        color: "#99a6c7"
+                        font.pixelSize: 14
+                    }
+                }
+            }
+        }
+
+        Frame {
+            Layout.fillWidth: true
+            padding: 18
+            Material.elevation: 6
+            background: Rectangle { radius: 12; color: "#131c2b"; border.color: "#1f2c3f" }
+
+            ColumnLayout {
+                anchors.fill: parent
+                spacing: 12
+                Layout.fillWidth: true
+
+                RowLayout {
+                    Layout.fillWidth: true
+                    spacing: 12
+
+                    TextField {
+                        id: joinField
+                        Layout.fillWidth: true
+                        Layout.minimumWidth: 320
+                        placeholderText: qsTr("输入房间 ID 或房主 SteamID64 或留空以主持房间")
+                        text: backend.joinTarget
+                        enabled: !(backend.isHost || backend.isConnected)
+                        onTextChanged: backend.joinTarget = text
+                        color: "#dce7ff"
+                        selectByMouse: true
+                    }
+
+                    CheckBox {
+                        text: qsTr("启动")
+                        checked: backend.isHost || backend.isConnected
+                        Layout.alignment: Qt.AlignVCenter
+                        onClicked: {
+                            if (checked && !backend.isConnected && !backend.isHost) {
+                                backend.joinHost()
+                            } else if (!checked && (backend.isConnected || backend.isHost)) {
+                                backend.disconnect()
+                            }
+                        }
+                    }
+                }
+
+                RowLayout {
+                    Layout.fillWidth: true
+                    spacing: 10
+
+                    Label {
+                        text: qsTr("本地转发端口")
+                        color: "#a7b6d8"
+                    }
+
+                    SpinBox {
+                        id: portField
+                        from: 0
+                        to: 65535
+                        value: backend.localPort
+                        editable: true
+                        enabled: !(backend.isHost || backend.isConnected)
+                        onValueChanged: backend.localPort = value
+                    }
+
+                    Rectangle { Layout.fillWidth: true; color: "transparent" }
+
+                    Label {
+                        text: qsTr("TCP 客户端: %1").arg(backend.tcpClients)
+                        color: "#7fb7ff"
+                    }
+                }
+            }
+        }
+
+        RowLayout {
+            Layout.fillWidth: true
+            Layout.fillHeight: true
+            spacing: 16
+
+            Frame {
+                Layout.fillWidth: true
+                Layout.fillHeight: true
+                padding: 16
+                Material.elevation: 6
+                background: Rectangle { radius: 12; color: "#111827"; border.color: "#1f2b3c" }
+
+                ColumnLayout {
+                    anchors.fill: parent
+                    Layout.fillWidth: true
+                    Layout.fillHeight: true
+                    spacing: 12
+
+                    RowLayout {
+                        Layout.fillWidth: true
+                        spacing: 10
+                        Label {
+                            text: qsTr("房间成员")
+                            font.pixelSize: 18
+                            color: "#e6efff"
+                        }
+                        Label {
+                            text: backend.lobbyId.length > 0 ? qsTr("ID %1").arg(backend.lobbyId) : qsTr("未加入房间")
+                            color: "#7f8cab"
+                            font.pixelSize: 13
+                        }
+                        Rectangle { Layout.fillWidth: true; color: "transparent" }
+                    }
+
+                    Item {
+                        Layout.fillWidth: true
+                        Layout.fillHeight: true
+                        Layout.preferredHeight: 280
+
+                        ListView {
+                            id: memberList
+                            Layout.fillWidth: true
+                            Layout.fillHeight: true
+                            Layout.margins: 8
+                            clip: true
+                            model: backend.members
+                            spacing: 10
+                            ScrollBar.vertical: ScrollBar {}
+                            delegate: Rectangle {
+                                radius: 10
+                                color: "#162033"
+                                border.color: "#1f2f45"
+                                width: memberList.width
+                                implicitHeight: 68
+
+                                RowLayout {
+                                    anchors.fill: parent
+                                    anchors.margins: 12
+                                    spacing: 12
+
+                                    ColumnLayout {
+                                        spacing: 2
+                                        Layout.fillWidth: true
+                                        Label {
+                                            text: modelData.name
+                                            font.pixelSize: 16
+                                            color: "#e1edff"
+                                            elide: Text.ElideRight
+                                        }
+                                        Label {
+                                            text: qsTr("SteamID: %1").arg(modelData.id)
+                                            font.pixelSize: 12
+                                            color: "#7f8cab"
+                                            elide: Text.ElideRight
+                                        }
+                                    }
+
+                                    ColumnLayout {
+                                        spacing: 2
+                                    Label {
+                                        text: (modelData.ping === undefined || modelData.ping === null)
+                                              ? qsTr("-")
+                                              : qsTr("%1 ms").arg(modelData.ping)
+                                        color: "#7fded1"
+                                        font.pixelSize: 14
+                                    }
+                                        Label {
+                                            text: modelData.relay
+                                            color: "#8ea4c8"
+                                            font.pixelSize: 12
+                                            elide: Text.ElideRight
+                                        }
+                                    }
+                                }
+                            }
+                        }
+
+                        Column {
+                            visible: memberList.count === 0
+                            anchors.centerIn: parent
+                            spacing: 6
+                            Label { text: qsTr("暂无成员"); color: "#8090b3" }
+                            Label { text: qsTr("创建房间或等待邀请即可出现。"); color: "#62708f"; font.pixelSize: 12 }
+                        }
+                    }
+                }
+            }
+
+            Frame {
+                Layout.preferredWidth: 380
+                Layout.fillHeight: true
+                padding: 16
+                Material.elevation: 6
+                background: Rectangle { radius: 12; color: "#111827"; border.color: "#1f2b3c" }
+
+                ColumnLayout {
+                    anchors.fill: parent
+                    spacing: 12
+                    Layout.fillWidth: true
+                    Layout.fillHeight: true
+
+                    RowLayout {
+                        Layout.fillWidth: true
+                        spacing: 10
+                        Label {
+                            text: qsTr("邀请好友")
+                            font.pixelSize: 18
+                            color: "#e6efff"
+                        }
+                        Rectangle { Layout.fillWidth: true; color: "transparent" }
+                        Label {
+                            text: qsTr("好友数: %1").arg(backend.friendsModel ? backend.friendsModel.count : 0)
+                            color: "#7f8cab"
+                            Layout.alignment: Qt.AlignVCenter
+                        }
+                        Button { text: qsTr("刷新"); onClicked: backend.refreshFriends() }
+                    }
+
+                    TextField {
+                        id: filterField
+                        Layout.fillWidth: true
+                        placeholderText: qsTr("搜索好友…")
+                        text: win.friendFilter
+                        onTextChanged: {
+                            win.friendFilter = text
+                            backend.friendFilter = text
+                        }
+                    }
+
+                    Item {
+                        Layout.fillWidth: true
+                        Layout.fillHeight: true
+                        Layout.preferredHeight: 320
+
+                        ListView {
+                            id: friendList
+                            anchors.fill: parent
+                            anchors.margins: 8
+                            clip: true
+                            spacing: 10
+                            model: backend.friendsModel
+                            ScrollBar.vertical: ScrollBar {}
+
+                            Component.onCompleted: {
+                                console.log("[QML] friendList completed, model count", model ? model.count : "<null>")
+                            }
+                            onModelChanged: console.log("[QML] friendList model changed", model)
+
+                            onCountChanged: console.log("[QML] friendList count", count)
+
+                            delegate: Rectangle {
+                                required property string displayName
+                                required property string steamId
+                                required property string avatar
+                                width: friendList.width
+
+                                Component.onCompleted: {
+                                    console.log("[QML] delegate", displayName, steamId)
+                                }
+
+                                visible: true // ordering handled by proxy, we keep all items
+                                radius: 10
+                                color: "#162033"
+                                border.color: "#1f2f45"
+                                implicitHeight: 60
+                                Layout.fillWidth: true
+
+                                RowLayout {
+                                    anchors.left: parent.left
+                                    anchors.right: parent.right
+                                    anchors.verticalCenter: parent.verticalCenter
+                                    anchors.margins: 10
+                                    spacing: 10
+                                    Layout.alignment: Qt.AlignVCenter
+                                    Rectangle {
+                                        id: avatarFrame
+                                        width: 44
+                                        height: 44
+                                        radius: 22
+                                        color: avatar.length > 0 ? "transparent" : "#1a2436"
+                                        border.color: avatar.length > 0 ? "transparent" : "#1f2f45"
+                                        Layout.alignment: Qt.AlignVCenter
+                                        Layout.preferredWidth: 44
+                                        Layout.preferredHeight: 44
+                                        clip: false
+                                        layer.enabled: avatar.length > 0
+                                        layer.effect: OpacityMask {
+                                            source: avatarFrame
+                                            maskSource: Rectangle {
+                                                width: avatarFrame.width
+                                                height: avatarFrame.height
+                                                radius: avatarFrame.width / 2
+                                                color: "white"
+                                            }
+                                        }
+                                        Image {
+                                            anchors.fill: parent
+                                            source: avatar
+                                            visible: avatar.length > 0
+                                            fillMode: Image.PreserveAspectCrop
+                                            smooth: true
+                                        }
+                                        Label {
+                                            anchors.centerIn: parent
+                                            visible: avatar.length === 0
+                                            text: displayName.length > 0 ? displayName[0] : "?"
+                                            color: "#6f7e9c"
+                                            font.pixelSize: 16
+                                        }
+                                    }
+                                    ColumnLayout {
+                                        spacing: 2
+                                        Layout.fillWidth: true
+                                        Layout.alignment: Qt.AlignVCenter
+                                        Label { text: displayName; color: "#e1edff"; font.pixelSize: 15; elide: Text.ElideRight }
+                                        Label { text: steamId; color: "#7f8cab"; font.pixelSize: 12; elide: Text.ElideRight }
+                                    }
+                                    Item { Layout.fillWidth: true }
+                                    Button {
+                                        text: qsTr("邀请")
+                                        enabled: backend.isHost || backend.isConnected
+                                        Layout.alignment: Qt.AlignVCenter
+                                        onClicked: backend.inviteFriend(steamId)
+                                    }
+                                }
+                            }
+                        }
+
+                        Column {
+                            visible: friendList.count === 0
+                            anchors.centerIn: parent
+                            spacing: 6
+                            Label { text: qsTr("未获取到好友列表"); color: "#8090b3" }
+                            Label { text: qsTr("确保已登录 Steam 并允许好友可见。"); color: "#62708f"; font.pixelSize: 12 }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    Rectangle {
+        visible: win.lastError.length > 0
+        opacity: visible ? 1 : 0
+        Behavior on opacity { NumberAnimation { duration: 150 } }
+        radius: 10
+        color: "#ef476f"
+        anchors.horizontalCenter: parent.horizontalCenter
+        anchors.bottom: parent.bottom
+        anchors.bottomMargin: 18
+        width: Math.min(parent.width - 80, 480)
+        height: implicitHeight
+
+        Column {
+            anchors.fill: parent
+            anchors.margins: 12
+            spacing: 4
+            Label {
+                text: qsTr("提示")
+                font.pixelSize: 14
+                color: "#ffe3ed"
+            }
+            Label {
+                text: win.lastError
+                font.pixelSize: 13
+                wrapMode: Text.Wrap
+                color: "#fff9fb"
+            }
+        }
+    }
+}

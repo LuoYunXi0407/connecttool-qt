@@ -1,7 +1,26 @@
 #include "multiplex_manager.h"
-#include "nanoid/nanoid.h"
-#include <iostream>
 #include <cstring>
+#include <iostream>
+#include <random>
+
+namespace {
+// Simple, local ID generator to avoid pulling in the full nanoid dependency
+std::string generateId(std::size_t length = 6)
+{
+    static constexpr char chars[] =
+        "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
+    static thread_local std::mt19937 rng{std::random_device{}()};
+    std::uniform_int_distribution<std::size_t> dist(0, sizeof(chars) - 2);
+
+    std::string id;
+    id.reserve(length);
+    for (std::size_t i = 0; i < length; ++i)
+    {
+        id.push_back(chars[dist(rng)]);
+    }
+    return id;
+}
+} // namespace
 
 MultiplexManager::MultiplexManager(ISteamNetworkingSockets *steamInterface, HSteamNetConnection steamConn,
                                    boost::asio::io_context &io_context, bool &isHost, int &localPort)
@@ -24,7 +43,7 @@ std::string MultiplexManager::addClient(std::shared_ptr<tcp::socket> socket)
     std::string id;
     {
         std::lock_guard<std::mutex> lock(mapMutex_);
-        id = nanoid::generate(6);
+        id = generateId(6);
         clientMap_[id] = socket;
         readBuffers_[id].resize(1048576);
     }
