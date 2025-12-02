@@ -442,24 +442,7 @@ void Backend::updateMembersList()
         if (currentLobby.IsValid())
         {
             lobbyMembers = roomManager_->getLobbyMembers();
-            if (!lobbyMembers.empty())
-            {
-                qDebug() << "[Members] lobby" << currentLobby.ConvertToUint64() << "has"
-                         << lobbyMembers.size() << "members";
-            }
-            else
-            {
-                qDebug() << "[Members] lobby" << currentLobby.ConvertToUint64() << "currently empty";
-            }
         }
-        else
-        {
-            qDebug() << "[Members] no valid lobby, using active connections only";
-        }
-    }
-    else
-    {
-        qDebug() << "[Members] room manager missing, falling back to active connections";
     }
 
     std::vector<MembersModel::Entry> entries;
@@ -513,8 +496,6 @@ void Backend::updateMembersList()
             }
         }
 
-        qDebug() << "[Members]" << entry.displayName << "(" << entry.steamId << ")" << "ping" << entry.ping
-                 << "relay" << entry.relay;
         entries.push_back(std::move(entry));
     }
 
@@ -547,13 +528,7 @@ void Backend::updateMembersList()
 
             entries.push_back(std::move(entry));
         }
-        qDebug() << "[Members] total entries after connections:" << entries.size();
-    }
-    else
-    {
-        qDebug() << "[Members] running as client, entries:" << entries.size();
     }
 
     membersModel_.setMembers(std::move(entries));
-    qDebug() << "[Members] model updated";
 }
