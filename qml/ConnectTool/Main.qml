@@ -487,6 +487,7 @@ ApplicationWindow {
                                 required property string avatar
                                 required property bool online
                                 required property string status
+                                required property int inviteCooldown
                                 width: friendList.width
 
                                 Component.onCompleted: {
@@ -585,10 +586,10 @@ ApplicationWindow {
                                     }
                                     Item { Layout.fillWidth: true }
                                     Button {
-                                        text: backend.inviteCooldown === 0
+                                        text: inviteCooldown === 0
                                               ? qsTr("邀请")
-                                              : qsTr("等待 %1s").arg(backend.inviteCooldown)
-                                        enabled: (backend.isHost || backend.isConnected) && backend.inviteCooldown === 0
+                                              : qsTr("等待 %1s").arg(inviteCooldown)
+                                        enabled: (backend.isHost || backend.isConnected) && inviteCooldown === 0
                                         Layout.alignment: Qt.AlignVCenter
                                         onClicked: backend.inviteFriend(steamId)
                                     }

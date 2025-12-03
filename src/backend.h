@@ -91,6 +91,7 @@ private:
   void ensureServerRunning();
   bool ensureSteamReady(const QString &actionLabel);
   void refreshHostId();
+  void updateFriendCooldown(const QString &steamId, int seconds);
 
   std::unique_ptr<SteamNetworkingManager> steamManager_;
   std::unique_ptr<SteamRoomManager> roomManager_;
@@ -117,5 +118,6 @@ private:
   MembersModel membersModel_;
   QString friendFilter_;
   std::unordered_map<uint64_t, QString> memberAvatars_;
+  std::unordered_map<uint64_t, int> inviteCooldowns_;
   int inviteCooldownSeconds_ = 0;
 };

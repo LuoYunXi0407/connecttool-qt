@@ -16,6 +16,7 @@ public:
     AvatarRole,
     OnlineRole,
     StatusRole,
+    InviteCooldownRole,
   };
 
   struct Entry {
@@ -25,6 +26,7 @@ public:
     bool online = false;
     QString status;
     int presenceRank = 0;
+    int inviteCooldown = 0;
   };
 
   explicit FriendsModel(QObject *parent = nullptr);
@@ -35,6 +37,7 @@ public:
   QHash<int, QByteArray> roleNames() const override;
 
   void setFriends(std::vector<Entry> list);
+  bool setInviteCooldown(const QString &steamId, int seconds);
   int count() const { return static_cast<int>(entries_.size()); }
   QString filter() const { return filter_; }
   void setFilter(const QString &text);

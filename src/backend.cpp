@@ -15,6 +15,7 @@
 #include <algorithm>
 #include <mutex>
 #include <unordered_set>
+#include <utility>
 
 namespace {
 struct PersonaDisplay {
@@ -84,8 +85,33 @@ Backend::Backend(QObject *parent)
   slowTimer_.start(5000);
 
   connect(&cooldownTimer_, &QTimer::timeout, this, [this]() {
-    if (inviteCooldownSeconds_ > 0) {
-      inviteCooldownSeconds_ -= 1;
+    bool anyChanged = false;
+    int maxCooldown = 0;
+    std::vector<std::pair<uint64_t, int>> updates;
+    for (auto it = inviteCooldowns_.begin(); it != inviteCooldowns_.end();) {
+      if (it->second > 0) {
+        it->second -= 1;
+        updates.emplace_back(it->first, it->second);
+        if (it->second == 0) {
+          it = inviteCooldowns_.erase(it);
+        } else {
+          maxCooldown = std::max(maxCooldown, it->second);
+          ++it;
+        }
+        anyChanged = true;
+      } else {
+        it = inviteCooldowns_.erase(it);
+      }
+    }
+    for (const auto &update : updates) {
+      updateFriendCooldown(QString::number(update.first), update.second);
+    }
+    if (inviteCooldownSeconds_ != maxCooldown) {
+      inviteCooldownSeconds_ = maxCooldown;
+      emit inviteCooldownChanged();
+    }
+    if (!anyChanged && inviteCooldownSeconds_ != 0) {
+      inviteCooldownSeconds_ = 0;
       emit inviteCooldownChanged();
     }
   });
@@ -295,18 +321,22 @@ void Backend::refreshFriends() {
     const QString displayName = QString::fromStdString(friendInfo.name);
     const QString avatar = QString::fromStdString(friendInfo.avatarDataUrl);
     const PersonaDisplay persona = personaStateDisplay(friendInfo.personaState);
+    const auto cooldownIt = inviteCooldowns_.find(friendInfo.id.ConvertToUint64());
+    const int friendCooldown =
+        cooldownIt != inviteCooldowns_.end() ? cooldownIt->second : 0;
 
     QVariantMap entry;
     entry.insert(QStringLiteral("id"), steamId);
     entry.insert(QStringLiteral("name"), displayName);
     entry.insert(QStringLiteral("status"), persona.label);
     entry.insert(QStringLiteral("online"), persona.online);
+    entry.insert(QStringLiteral("cooldown"), friendCooldown);
     if (!avatar.isEmpty()) {
       entry.insert(QStringLiteral("avatar"), avatar);
     }
     updated.push_back(entry);
     modelData.push_back({steamId, displayName, avatar, persona.online,
-                         persona.label, persona.priority});
+                         persona.label, persona.priority, friendCooldown});
     ++idx;
   }
   friendsModel_.setFriends(std::move(modelData));
@@ -328,10 +358,6 @@ void Backend::setFriendFilter(const QString &text) {
 void Backend::refreshMembers() { updateMembersList(); }
 
 void Backend::inviteFriend(const QString &steamId) {
-  if (inviteCooldownSeconds_ > 0) {
-    emit errorMessage(tr("请 %1 秒后再发送邀请。").arg(inviteCooldownSeconds_));
-    return;
-  }
   if (!ensureSteamReady(tr("邀请好友"))) {
     return;
   }
@@ -341,13 +367,40 @@ void Backend::inviteFriend(const QString &steamId) {
     emit errorMessage(tr("无效的好友 ID。"));
     return;
   }
+  auto it = inviteCooldowns_.find(friendId);
+  if (it != inviteCooldowns_.end() && it->second > 0) {
+    emit errorMessage(tr("请 %1 秒后再发送邀请。").arg(it->second));
+    return;
+  }
   if (roomManager_ && roomManager_->getCurrentLobby().IsValid()) {
     SteamMatchmaking()->InviteUserToLobby(roomManager_->getCurrentLobby(),
                                           CSteamID(friendId));
-    inviteCooldownSeconds_ = 3;
+    inviteCooldowns_[friendId] = 3;
+    inviteCooldownSeconds_ =
+        std::max(inviteCooldownSeconds_, inviteCooldowns_[friendId]);
     emit inviteCooldownChanged();
+    updateFriendCooldown(steamId, inviteCooldowns_[friendId]);
   } else {
     emit errorMessage(tr("当前未在房间中，无法邀请。"));
+  }
+}
+
+void Backend::updateFriendCooldown(const QString &steamId, int seconds) {
+  const bool modelChanged = friendsModel_.setInviteCooldown(steamId, seconds);
+  bool listChanged = false;
+  for (auto &entry : friends_) {
+    QVariantMap map = entry.toMap();
+    if (map.value(QStringLiteral("id")).toString() == steamId) {
+      if (map.value(QStringLiteral("cooldown")).toInt() != seconds) {
+        map.insert(QStringLiteral("cooldown"), seconds);
+        entry = map;
+        listChanged = true;
+      }
+      break;
+    }
+  }
+  if (listChanged) {
+    emit friendsChanged();
   }
 }
 

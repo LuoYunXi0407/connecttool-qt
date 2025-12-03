@@ -29,6 +29,8 @@ QVariant FriendsModel::data(const QModelIndex &index, int role) const {
     return entry.online;
   case StatusRole:
     return entry.status;
+  case InviteCooldownRole:
+    return entry.inviteCooldown;
   default:
     return {};
   }
@@ -38,7 +40,7 @@ QHash<int, QByteArray> FriendsModel::roleNames() const {
   return {
       {SteamIdRole, "steamId"}, {DisplayNameRole, "displayName"},
       {AvatarRole, "avatar"},   {OnlineRole, "online"},
-      {StatusRole, "status"},
+      {StatusRole, "status"},   {InviteCooldownRole, "inviteCooldown"},
   };
 }
 
@@ -63,6 +65,32 @@ void FriendsModel::setFriends(std::vector<Entry> list) {
                        index(static_cast<int>(filtered_.size()) - 1, 0));
     }
   }
+}
+
+bool FriendsModel::setInviteCooldown(const QString &steamId, int seconds) {
+  int changedRow = -1;
+  for (auto &entry : entries_) {
+    if (entry.steamId == steamId) {
+      entry.inviteCooldown = seconds;
+      break;
+    }
+  }
+  for (size_t i = 0; i < filtered_.size(); ++i) {
+    auto &entry = filtered_[i];
+    if (entry.steamId == steamId) {
+      if (entry.inviteCooldown != seconds) {
+        entry.inviteCooldown = seconds;
+        changedRow = static_cast<int>(i);
+      }
+      break;
+    }
+  }
+  if (changedRow >= 0) {
+    emit dataChanged(index(changedRow, 0), index(changedRow, 0),
+                     {InviteCooldownRole});
+    return true;
+  }
+  return false;
 }
 
 void FriendsModel::setFilter(const QString &text) {
