@@ -14,8 +14,11 @@
 #include <QtDebug>
 #include <algorithm>
 #include <chrono>
+#include <isteamnetworkingutils.h>
 #include <mutex>
 #include <sstream>
+#include <steam_api.h>
+#include <steamnetworkingtypes.h>
 #include <unordered_set>
 #include <utility>
 
@@ -61,6 +64,15 @@ QString defaultRoomName() {
   }
   return QCoreApplication::translate("Backend", "ConnectTool 房间");
 }
+
+void steamWarningHook(int /*severity*/, const char *msg) {
+  qDebug() << "[SteamAPI]" << msg;
+}
+
+void steamNetDebugHook(ESteamNetworkingSocketsDebugOutputType /*type*/,
+                       const char *msg) {
+  qDebug() << "[SteamNet]" << msg;
+}
 } // namespace
 
 Backend::Backend(QObject *parent)
@@ -75,6 +87,14 @@ Backend::Backend(QObject *parent)
   if (!steamReady_) {
     status_ = tr("无法初始化 Steam API，请确认客户端已登录。");
     return;
+  }
+  if (SteamClient()) {
+    SteamClient()->SetWarningMessageHook(&steamWarningHook);
+  }
+  if (SteamNetworkingUtils()) {
+    SteamNetworkingUtils()->SetDebugOutputFunction(
+        k_ESteamNetworkingSocketsDebugOutputType_Everything,
+        &steamNetDebugHook);
   }
   roomName_ = defaultRoomName();
   emit roomNameChanged();
@@ -341,9 +361,7 @@ void Backend::joinHost() {
     return;
   }
   clearStatusOverride();
-  const auto markNotFound = [this]() {
-    setStatusOverride(tr("房间不存在。"));
-  };
+  const auto markNotFound = [this]() { setStatusOverride(tr("房间不存在。")); };
   const QString trimmedTarget = joinTarget_.trimmed();
   if (trimmedTarget.isEmpty()) {
     startHosting();

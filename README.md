@@ -40,3 +40,13 @@ $ export STEAMWORKS_SDK_DIR=/your/path/to/sdk
 ```
 $ nix run github:moeleak/connecttool-qt --impure
 ```
+
+> **Apple Silicon 提示（arm64）：** Steamworks 目前只提供 x86_64 的
+> `libsteamwebrtc.dylib`，要启用 ICE 直连需要在 Rosetta 下构建/运行 x86_64
+> 版本。
+>
+> 1. 在 `/etc/nix/nix.conf` 配置
+>    `extra-platforms = x86_64-darwin aarch64-darwin` 后重启 nix-daemon
+>    `sudo launchctl kickstart -k system/org.nixos.nix-daemon`
+> 2. 构建：`nix build .#packages.x86_64-darwin.default --impure -L`
+> 3. 运行：`arch -x86_64 ./result/bin/connecttool-qt`

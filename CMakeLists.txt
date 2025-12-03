@@ -63,8 +63,20 @@ if(WIN32 AND NOT STEAMWORKS_RUNTIME_LIBRARY)
     message(FATAL_ERROR "Steamworks redistributable DLL not found. Ensure steam_api64.dll is available in the redistributable_bin directory.")
 endif()
 
+find_file(STEAMWORKS_WEBRTC_LIBRARY
+    NAMES
+        libsteamwebrtc.dylib
+        libsteamwebrtc.so
+        steamwebrtc64.dll
+    PATHS ${_steam_lib_hints})
+
 if(NOT STEAMWORKS_RUNTIME_LIBRARY)
     set(STEAMWORKS_RUNTIME_LIBRARY ${STEAMWORKS_LIBRARY})
+endif()
+
+set(STEAMWORKS_RUNTIME_LIBRARIES ${STEAMWORKS_RUNTIME_LIBRARY})
+if(STEAMWORKS_WEBRTC_LIBRARY)
+    list(APPEND STEAMWORKS_RUNTIME_LIBRARIES ${STEAMWORKS_WEBRTC_LIBRARY})
 endif()
 
 add_executable(connecttool-qt
@@ -100,13 +112,17 @@ target_link_libraries(connecttool-qt PRIVATE
 # install time, and make sure the loader can find it on macOS.
 add_custom_command(TARGET connecttool-qt POST_BUILD
     COMMAND ${CMAKE_COMMAND} -E copy_if_different
-            ${STEAMWORKS_RUNTIME_LIBRARY}
+            ${STEAMWORKS_RUNTIME_LIBRARIES}
             $<TARGET_FILE_DIR:connecttool-qt>)
 
 if(APPLE)
     set_target_properties(connecttool-qt PROPERTIES
         BUILD_RPATH "@loader_path"
         INSTALL_RPATH "@loader_path;@loader_path/../lib")
+elseif(WIN32)
+    # Ensure DLLs are discoverable on Windows build environments
+    set_target_properties(connecttool-qt PROPERTIES
+        BUILD_RPATH "$ORIGIN")
 endif()
 
 qt_add_qml_module(connecttool-qt
@@ -122,4 +138,4 @@ qt_add_qml_module(connecttool-qt
 file(WRITE ${CMAKE_CURRENT_BINARY_DIR}/steam_appid.txt "480\n")
 install(FILES ${CMAKE_CURRENT_BINARY_DIR}/steam_appid.txt DESTINATION bin)
 install(TARGETS connecttool-qt RUNTIME DESTINATION bin)
-install(FILES ${STEAMWORKS_RUNTIME_LIBRARY} DESTINATION bin OPTIONAL)
+install(FILES ${STEAMWORKS_RUNTIME_LIBRARIES} DESTINATION bin OPTIONAL)
