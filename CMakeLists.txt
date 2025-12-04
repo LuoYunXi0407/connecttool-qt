@@ -95,15 +95,30 @@ add_executable(connecttool-qt
     src/members_model.cpp
     net/multiplex_manager.cpp
     net/tcp_server.cpp
+    net/ip_negotiator.cpp
+    net/heartbeat_manager.cpp
+    net/node_identity.cpp
     steam/steam_message_handler.cpp
     steam/steam_networking_manager.cpp
     steam/steam_room_manager.cpp
-    steam/steam_utils.cpp)
+    steam/steam_utils.cpp
+    steam/vpn_message_handler.cpp
+    steam/steam_vpn_networking_manager.cpp
+    steam/steam_vpn_bridge.cpp)
+
+if(WIN32)
+    target_sources(connecttool-qt PRIVATE tun/tun_windows.cpp)
+elseif(APPLE)
+    target_sources(connecttool-qt PRIVATE tun/tun_macos.cpp)
+else()
+    target_sources(connecttool-qt PRIVATE tun/tun_linux.cpp)
+endif()
 
 target_include_directories(connecttool-qt PRIVATE
     src
     net
     steam
+    tun
     ${STEAMWORKS_INCLUDE_DIR})
 
 # Ensure we always get a headers-only target, regardless of which Boost package layout is found.
@@ -133,6 +148,10 @@ target_link_libraries(connecttool-qt PRIVATE
     Boost::headers
     Threads::Threads
     ${STEAMWORKS_LIBRARY})
+
+if(WIN32)
+    target_link_libraries(connecttool-qt PRIVATE iphlpapi ws2_32)
+endif()
 
 # Ensure the Steam redistributable is next to the executable at build and
 # install time, and make sure the loader can find it on macOS.

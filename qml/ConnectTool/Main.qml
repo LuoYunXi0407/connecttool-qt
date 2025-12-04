@@ -263,6 +263,21 @@ ApplicationWindow {
                                 selectByMouse: true
                             }
 
+                            ComboBox {
+                                id: modeCombo
+                                Layout.preferredWidth: 140
+                                Layout.alignment: Qt.AlignVCenter
+                                model: [
+                                    { text: qsTr("TCP 模式"), value: 0 },
+                                    { text: qsTr("TUN 模式"), value: 1 }
+                                ]
+                                textRole: "text"
+                                valueRole: "value"
+                                currentIndex: Math.max(0, Math.min(model.length - 1, backend.connectionMode))
+                                enabled: !(backend.isHost || backend.isConnected)
+                                onActivated: backend.connectionMode = model[currentIndex].value
+                            }
+
                             Switch {
                                 text: qsTr("启动")
                                 checked: backend.isHost || backend.isConnected
@@ -306,7 +321,23 @@ ApplicationWindow {
                                 model: [
                                     { title: qsTr("房间名"), value: backend.lobbyName, accent: "#7fded1" },
                                     { title: qsTr("房间 ID"), value: backend.lobbyId, accent: "#23c9a9" },
-                                    { title: qsTr("连接 IP"), value: backend.localBindPort > 0 ? qsTr("localhost:%1").arg(backend.localBindPort) : "", accent: "#2ad2ff" }
+                                    backend.connectionMode === 1
+                                        ? {
+                                              title: qsTr("TUN 信息"),
+                                              value: backend.tunLocalIp.length > 0
+                                                     ? (backend.tunDeviceName.length > 0
+                                                        ? qsTr("%1 · %2").arg(backend.tunLocalIp).arg(backend.tunDeviceName)
+                                                        : backend.tunLocalIp)
+                                                     : (backend.tunDeviceName.length > 0
+                                                        ? qsTr("%1 · 待分配 IP").arg(backend.tunDeviceName)
+                                                        : qsTr("未启动")),
+                                              accent: "#2ad2ff"
+                                          }
+                                        : {
+                                              title: qsTr("连接 IP"),
+                                              value: backend.localBindPort > 0 ? qsTr("localhost:%1").arg(backend.localBindPort) : "",
+                                              accent: "#2ad2ff"
+                                          }
                                 ]
                                 delegate: Rectangle {
                                     required property string title
@@ -358,6 +389,7 @@ ApplicationWindow {
                         }
 
                         RowLayout {
+                            visible: backend.connectionMode === 0
                             Layout.fillWidth: true
                             spacing: 10
 
@@ -372,7 +404,7 @@ ApplicationWindow {
                                 to: 65535
                                 value: backend.localPort
                                 editable: true
-                                enabled: !(backend.isHost || backend.isConnected)
+                                enabled: backend.connectionMode === 0 && !(backend.isHost || backend.isConnected)
                                 onValueChanged: backend.localPort = value
                             }
 
@@ -389,7 +421,7 @@ ApplicationWindow {
                                 to: 65535
                                 value: backend.localBindPort
                                 editable: true
-                                enabled: !(backend.isHost || backend.isConnected)
+                                enabled: backend.connectionMode === 0 && !(backend.isHost || backend.isConnected)
                                 onValueChanged: backend.localBindPort = value
                             }
 

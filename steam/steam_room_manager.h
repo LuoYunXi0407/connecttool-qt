@@ -10,6 +10,7 @@
 #include <tuple>
 
 class SteamNetworkingManager; // Forward declaration
+class SteamVpnNetworkingManager;
 class SteamRoomManager;       // Forward declaration for callbacks
 
 class SteamFriendsCallbacks {
@@ -85,6 +86,8 @@ public:
   void setCurrentLobby(CSteamID lobby) { currentLobby = lobby; }
   void addLobby(CSteamID lobby) { lobbies.push_back(lobby); }
   void clearLobbies() { lobbies.clear(); }
+  void setVpnMode(bool enabled, SteamVpnNetworkingManager *vpnManager);
+  bool vpnMode() const { return vpnMode_; }
 
 private:
   friend class SteamMatchmakingCallbacks;
@@ -96,6 +99,7 @@ private:
   void handlePingMessage(const std::string &payload);
 
   SteamNetworkingManager *networkingManager_;
+  SteamVpnNetworkingManager *vpnNetworkingManager_ = nullptr;
   CSteamID currentLobby;
   std::vector<CSteamID> lobbies;
   std::vector<LobbyInfo> lobbyInfos;
@@ -110,4 +114,5 @@ private:
     std::chrono::steady_clock::time_point updatedAt;
   };
   std::unordered_map<uint64_t, PingInfo> remotePings_;
+  bool vpnMode_ = false;
 };
