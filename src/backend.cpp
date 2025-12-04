@@ -177,6 +177,15 @@ Backend::Backend(QObject *parent)
   steamManager_->setRoomManager(roomManager_.get());
   roomManager_->setLobbyName(roomName_.toStdString());
   roomManager_->setPublishLobby(publishLobby_);
+  roomManager_->setLobbyModeChangedCallback(
+      [this](bool wantsTun, const CSteamID &lobby) {
+        QMetaObject::invokeMethod(
+            this,
+            [this, wantsTun, lobby]() {
+              handleLobbyModeChanged(wantsTun, lobby);
+            },
+            Qt::QueuedConnection);
+      });
   roomManager_->setLobbyListCallback(
       [this](const std::vector<SteamRoomManager::LobbyInfo> &lobbies) {
         QMetaObject::invokeMethod(
@@ -861,6 +870,24 @@ void Backend::setConnectionMode(int mode) {
   if (roomManager_) {
     roomManager_->setVpnMode(inTunMode(), vpnManager_.get());
   }
+  updateStatus();
+  emit stateChanged();
+}
+
+void Backend::handleLobbyModeChanged(bool wantsTun, const CSteamID &lobby) {
+  if (!roomManager_ || lobby != roomManager_->getCurrentLobby()) {
+    return;
+  }
+  if (!wantsTun || connectionMode_ == ConnectionMode::Tun) {
+    return;
+  }
+  // If host is advertising TUN, auto-switch guests into TUN mode.
+  if (isHost()) {
+    return;
+  }
+  connectionMode_ = ConnectionMode::Tun;
+  ensureVpnSetup();
+  roomManager_->setVpnMode(true, vpnManager_.get());
   updateStatus();
   emit stateChanged();
 }

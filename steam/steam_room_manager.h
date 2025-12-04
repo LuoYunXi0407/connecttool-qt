@@ -9,6 +9,8 @@
 #include <chrono>
 #include <tuple>
 
+inline constexpr const char kLobbyKeyMode[] = "ct_mode";
+
 class SteamNetworkingManager; // Forward declaration
 class SteamVpnNetworkingManager;
 class SteamRoomManager;       // Forward declaration for callbacks
@@ -88,6 +90,8 @@ public:
   void clearLobbies() { lobbies.clear(); }
   void setVpnMode(bool enabled, SteamVpnNetworkingManager *vpnManager);
   bool vpnMode() const { return vpnMode_; }
+  void setLobbyModeChangedCallback(
+      std::function<void(bool wantsTun, const CSteamID &lobby)> callback);
 
 private:
   friend class SteamMatchmakingCallbacks;
@@ -97,6 +101,7 @@ private:
   void decideTransportForCurrentLobby();
   void notifyLobbyListUpdated();
   void handlePingMessage(const std::string &payload);
+  bool lobbyWantsTun(CSteamID lobby) const;
 
   SteamNetworkingManager *networkingManager_;
   SteamVpnNetworkingManager *vpnNetworkingManager_ = nullptr;
@@ -115,4 +120,6 @@ private:
   };
   std::unordered_map<uint64_t, PingInfo> remotePings_;
   bool vpnMode_ = false;
+  std::function<void(bool wantsTun, const CSteamID &lobby)>
+      lobbyModeChangedCallback_;
 };

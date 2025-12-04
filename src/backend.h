@@ -105,6 +105,7 @@ public:
   void setLobbyFilter(const QString &text);
   void setLobbySortMode(int mode);
   void setConnectionMode(int mode);
+  void handleLobbyModeChanged(bool wantsTun, const CSteamID &lobby);
 
   Q_INVOKABLE void startHosting();
   Q_INVOKABLE void joinHost();

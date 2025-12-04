@@ -2,6 +2,7 @@
 #include "steam_networking_manager.h"
 #include "steam_vpn_networking_manager.h"
 #include <algorithm>
+#include <cstring>
 #include <iostream>
 #include <isteamnetworkingutils.h>
 #include <utility>
@@ -14,6 +15,8 @@ constexpr const char *kLobbyKeyPingLocation = "ct_ping_loc";
 constexpr const char *kLobbyKeyTag = "ct_tag";
 constexpr const char *kLobbyTagValue = "1";
 constexpr const char *kPingPrefix = "PING|";
+constexpr const char *kLobbyModeTun = "tun";
+constexpr const char *kLobbyModeTcp = "tcp";
 } // namespace
 
 SteamFriendsCallbacks::SteamFriendsCallbacks(SteamNetworkingManager *manager,
@@ -219,6 +222,16 @@ void SteamMatchmakingCallbacks::OnLobbyEntered(LobbyEnter_t *pCallback) {
     }
     std::cout << "Entered lobby: " << pCallback->m_ulSteamIDLobby << std::endl;
 
+    const bool lobbyIsTun = roomManager_->lobbyWantsTun(
+        CSteamID(pCallback->m_ulSteamIDLobby));
+    if (lobbyIsTun) {
+      roomManager_->vpnMode_ = true;
+    }
+    if (roomManager_->lobbyModeChangedCallback_) {
+      roomManager_->lobbyModeChangedCallback_(lobbyIsTun,
+                                              roomManager_->getCurrentLobby());
+    }
+
     // Set Rich Presence to enable invite functionality
     SteamFriends()->SetRichPresence("steam_display", "#Status_InLobby");
     SteamFriends()->SetRichPresence(
@@ -335,6 +348,11 @@ void SteamRoomManager::setVpnMode(bool enabled,
                                   SteamVpnNetworkingManager *vpnManager) {
   vpnMode_ = enabled;
   vpnNetworkingManager_ = vpnManager;
+}
+
+void SteamRoomManager::setLobbyModeChangedCallback(
+    std::function<void(bool wantsTun, const CSteamID &lobby)> callback) {
+  lobbyModeChangedCallback_ = std::move(callback);
 }
 
 SteamRoomManager::~SteamRoomManager() {
@@ -498,6 +516,7 @@ void SteamRoomManager::refreshLobbyMetadata() {
     SteamMatchmaking()->DeleteLobbyData(currentLobby, kLobbyKeyHostId);
     SteamMatchmaking()->DeleteLobbyData(currentLobby, kLobbyKeyHostName);
     SteamMatchmaking()->DeleteLobbyData(currentLobby, kLobbyKeyPingLocation);
+    SteamMatchmaking()->DeleteLobbyData(currentLobby, kLobbyKeyMode);
     return;
   }
 
@@ -538,6 +557,8 @@ void SteamRoomManager::refreshLobbyMetadata() {
     SteamMatchmaking()->SetLobbyData(currentLobby, kLobbyKeyPingLocation,
                                      buffer);
   }
+  SteamMatchmaking()->SetLobbyData(currentLobby, kLobbyKeyMode,
+                                   vpnMode_ ? kLobbyModeTun : kLobbyModeTcp);
 }
 
 void SteamRoomManager::decideTransportForCurrentLobby() {
@@ -662,4 +683,12 @@ bool SteamRoomManager::getRemotePing(const CSteamID &id, int &ping,
   ping = it->second.ping;
   relay = it->second.relay;
   return ping >= 0;
+}
+
+bool SteamRoomManager::lobbyWantsTun(CSteamID lobby) const {
+  if (!SteamMatchmaking()) {
+    return false;
+  }
+  const char *mode = SteamMatchmaking()->GetLobbyData(lobby, kLobbyKeyMode);
+  return mode && strcmp(mode, kLobbyModeTun) == 0;
 }
