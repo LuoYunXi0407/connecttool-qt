@@ -37,8 +37,7 @@ bool SteamVpnBridge::start(const std::string &tunDeviceName,
   ipNegotiator_.reset();
   heartbeatManager_.reset();
   if (!steamManager_) {
-    std::cerr << "Steam manager missing, cannot start VPN bridge"
-              << std::endl;
+    std::cerr << "Steam manager missing, cannot start VPN bridge" << std::endl;
     return false;
   }
 
@@ -49,8 +48,8 @@ bool SteamVpnBridge::start(const std::string &tunDeviceName,
     std::cerr << "Failed to create TUN device" << std::endl;
     return false;
   }
-  if (!tunDevice_->open(
-          tunDeviceName.empty() ? kDefaultTunName : tunDeviceName, mtuToUse)) {
+  if (!tunDevice_->open(tunDeviceName.empty() ? kDefaultTunName : tunDeviceName,
+                        mtuToUse)) {
     std::cerr << "Failed to open TUN device: " << tunDevice_->get_last_error()
               << std::endl;
     return false;
@@ -76,20 +75,17 @@ bool SteamVpnBridge::start(const std::string &tunDeviceName,
         broadcastVpnMessage(type, payload, len, reliable);
       });
 
-  ipNegotiator_.setSuccessCallback(
-      [this](uint32_t ip, const NodeID &nodeId) {
-        onNegotiationSuccess(ip, nodeId);
-      });
+  ipNegotiator_.setSuccessCallback([this](uint32_t ip, const NodeID &nodeId) {
+    onNegotiationSuccess(ip, nodeId);
+  });
 
-  heartbeatManager_.setSendCallback(
-      [this](VpnMessageType type, const uint8_t *payload, size_t len,
-             bool reliable) {
-        broadcastVpnMessage(type, payload, len, reliable);
-      });
+  heartbeatManager_.setSendCallback([this](VpnMessageType type,
+                                           const uint8_t *payload, size_t len,
+                                           bool reliable) {
+    broadcastVpnMessage(type, payload, len, reliable);
+  });
   heartbeatManager_.setNodeExpiredCallback(
-      [this](const NodeID &nodeId, uint32_t ip) {
-        onNodeExpired(nodeId, ip);
-      });
+      [this](const NodeID &nodeId, uint32_t ip) { onNodeExpired(nodeId, ip); });
 
   ipNegotiator_.startNegotiation();
   tunDevice_->set_non_blocking(true);
@@ -148,13 +144,13 @@ void SteamVpnBridge::tunReadThread() {
   auto lastTimeoutCheck = std::chrono::steady_clock::now();
 
   while (running_) {
-    const int bytesRead = tunDevice_ ? tunDevice_->read(buffer, sizeof(buffer))
-                                     : -1;
+    const int bytesRead =
+        tunDevice_ ? tunDevice_->read(buffer, sizeof(buffer)) : -1;
     if (bytesRead > 0 && steamManager_) {
       const uint32_t destIP = extractDestIP(buffer, bytesRead);
       const uint32_t srcIP = extractSourceIP(buffer, bytesRead);
-      uint8_t vpnPacket[2048 + sizeof(VpnMessageHeader) +
-                        sizeof(VpnPacketWrapper)];
+      uint8_t
+          vpnPacket[2048 + sizeof(VpnMessageHeader) + sizeof(VpnPacketWrapper)];
       auto *header = reinterpret_cast<VpnMessageHeader *>(vpnPacket);
       header->type = VpnMessageType::IP_PACKET;
 
@@ -191,8 +187,8 @@ void SteamVpnBridge::tunReadThread() {
         stats_.packetsSent += peers.size();
         stats_.bytesSent += static_cast<uint64_t>(bytesRead) * peers.size();
         std::cout << "[SteamVPN] Broadcast " << ipToString(srcIP) << " -> "
-                  << ipToString(destIP) << " to " << peers.size()
-                  << " peers (" << bytesRead << " bytes)" << std::endl;
+                  << ipToString(destIP) << " to " << peers.size() << " peers ("
+                  << bytesRead << " bytes)" << std::endl;
       } else {
         CSteamID targetSteamID;
         bool found = false;
@@ -221,10 +217,10 @@ void SteamVpnBridge::tunReadThread() {
           std::lock_guard<std::mutex> lock(statsMutex_);
           stats_.packetsSent++;
           stats_.bytesSent += static_cast<uint64_t>(bytesRead);
-          std::cout << "[SteamVPN] Sent " << ipToString(srcIP) << " -> "
-                    << ipToString(destIP) << " (" << bytesRead
-                    << " bytes) to " << targetSteamID.ConvertToUint64()
-                    << std::endl;
+          // std::cout << "[SteamVPN] Sent " << ipToString(srcIP) << " -> "
+          //           << ipToString(destIP) << " (" << bytesRead
+          //           << " bytes) to " << targetSteamID.ConvertToUint64()
+          //           << std::endl;
         }
       }
     }
@@ -252,10 +248,8 @@ void SteamVpnBridge::handleVpnMessage(const uint8_t *data, size_t length,
     return;
   }
   const uint8_t *payload = data + sizeof(VpnMessageHeader);
-  const std::string peerName = SteamFriends()
-                                   ? SteamFriends()->GetFriendPersonaName(
-                                         senderSteamID)
-                                   : "";
+  const std::string peerName =
+      SteamFriends() ? SteamFriends()->GetFriendPersonaName(senderSteamID) : "";
 
   if (header.type == VpnMessageType::IP_PACKET) {
     if (tunDevice_ && payloadLength > sizeof(VpnPacketWrapper)) {
@@ -324,9 +318,9 @@ void SteamVpnBridge::handleVpnMessage(const uint8_t *data, size_t length,
       if ((ipAddress & subnetMask_) == (baseIP_ & subnetMask_)) {
         NodeID nodeId = NodeIdentity::generate(csteamID);
         updateRoute(nodeId, csteamID, ipAddress,
-                    SteamFriends() ? SteamFriends()->GetFriendPersonaName(
-                                         csteamID)
-                                   : "");
+                    SteamFriends()
+                        ? SteamFriends()->GetFriendPersonaName(csteamID)
+                        : "");
       }
     }
     break;
@@ -448,14 +442,12 @@ void SteamVpnBridge::onNegotiationSuccess(uint32_t ipAddress,
     }
 
     const CSteamID mySteamID = SteamUser()->GetSteamID();
-    updateRoute(nodeId, mySteamID, localIP_, SteamFriends()
-                                                ? SteamFriends()->GetPersonaName()
-                                                : "");
+    updateRoute(nodeId, mySteamID, localIP_,
+                SteamFriends() ? SteamFriends()->GetPersonaName() : "");
     heartbeatManager_.initialize(nodeId, localIP_);
-    heartbeatManager_.registerNode(nodeId, mySteamID, localIP_,
-                                   SteamFriends()
-                                       ? SteamFriends()->GetPersonaName()
-                                       : "");
+    heartbeatManager_.registerNode(
+        nodeId, mySteamID, localIP_,
+        SteamFriends() ? SteamFriends()->GetPersonaName() : "");
     heartbeatManager_.start();
     broadcastRouteUpdate();
   } else {
@@ -565,8 +557,7 @@ void SteamVpnBridge::sendRouteUpdateTo(CSteamID targetSteamID) {
                                    k_nSteamNetworkingSend_Reliable);
 }
 
-void SteamVpnBridge::sendVpnMessage(VpnMessageType type,
-                                    const uint8_t *payload,
+void SteamVpnBridge::sendVpnMessage(VpnMessageType type, const uint8_t *payload,
                                     size_t payloadLength,
                                     CSteamID targetSteamID, bool reliable) {
   if (!steamManager_) {
@@ -582,10 +573,9 @@ void SteamVpnBridge::sendVpnMessage(VpnMessageType type,
     std::memcpy(message.data() + sizeof(VpnMessageHeader), payload,
                 payloadLength);
   }
-  const int flags =
-      reliable ? k_nSteamNetworkingSend_Reliable
-               : (k_nSteamNetworkingSend_UnreliableNoNagle |
-                  k_nSteamNetworkingSend_NoDelay);
+  const int flags = reliable ? k_nSteamNetworkingSend_Reliable
+                             : (k_nSteamNetworkingSend_UnreliableNoNagle |
+                                k_nSteamNetworkingSend_NoDelay);
   steamManager_->sendMessageToUser(targetSteamID, message.data(),
                                    static_cast<uint32_t>(message.size()),
                                    flags);
@@ -607,13 +597,11 @@ void SteamVpnBridge::broadcastVpnMessage(VpnMessageType type,
     std::memcpy(message.data() + sizeof(VpnMessageHeader), payload,
                 payloadLength);
   }
-  const int flags =
-      reliable ? k_nSteamNetworkingSend_Reliable
-               : (k_nSteamNetworkingSend_UnreliableNoNagle |
-                  k_nSteamNetworkingSend_NoDelay);
+  const int flags = reliable ? k_nSteamNetworkingSend_Reliable
+                             : (k_nSteamNetworkingSend_UnreliableNoNagle |
+                                k_nSteamNetworkingSend_NoDelay);
   steamManager_->broadcastMessage(message.data(),
-                                  static_cast<uint32_t>(message.size()),
-                                  flags);
+                                  static_cast<uint32_t>(message.size()), flags);
 }
 
 std::string SteamVpnBridge::ipToString(uint32_t ip) {
