@@ -1,13 +1,23 @@
 # connecttool-qt
 
-基于 Qt 重新开发的 UI 界面，让联机更加简单。
+[![Latest Release](https://img.shields.io/github/v/release/moeleak/connecttool-qt?display_name=tag&sort=semver&color=23c9a9)](https://github.com/moeleak/connecttool-qt/releases/latest)
+[![Downloads](https://img.shields.io/github/downloads/moeleak/connecttool-qt/total?logo=github&color=2ad2ff)](https://github.com/moeleak/connecttool-qt/releases)
+
+connecttool-qt 是一款基于 connecttool
+重制的图形化工具，相比主线分支优化了跨平台支持，网络性能以及拥有更好的 UI
+界面，可以利用 Steam Network 进行 TCP 转发或类似 Tailscale 的异地组网效果（TUN
+模式）。
+
+## 交流群
+
+- connecttool-qt 交流群：902943118（[点此加入](https://qm.qq.com/q/Kx6WpGxlE4)）
+- ConnectTool 总群：616325806（[点此加入](https://qm.qq.com/q/hgAZJYasbS)）
 
 ## 特性
 
 - 跨平台支持良好，支持 Windows/Linux/MacOS
-- 去中心化（使用Steam Lobby）即可实现公布房间到大厅
-- 支持单一的 TCP 转发模式和跨平台 TUN 虚拟网卡模式
-- 房间内文字聊天
+- 支持单一的 TCP 转发模式和跨平台 TUN 虚拟网卡模式，实现异地组网
+- 房间内文字聊天，右键消息可置顶消息，让从其他地方加进来的人也可以看到房间信息快速了解房间
 
 ## 待开发特性
 
