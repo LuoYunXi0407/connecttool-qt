@@ -395,8 +395,8 @@ ApplicationWindow {
 
                             Repeater {
                                 model: [
-                                    { title: qsTr("房间名"), value: backend.lobbyName, accent: "#7fded1" },
-                                    { title: qsTr("房间 ID"), value: backend.lobbyId, accent: "#23c9a9" },
+                                    { title: qsTr("房间名"), value: backend.lobbyName, copyValue: backend.lobbyName, accent: "#7fded1" },
+                                    { title: qsTr("房间 ID"), value: backend.lobbyId, copyValue: backend.lobbyId, accent: "#23c9a9" },
                                     backend.connectionMode === 1
                                     ? {
                                         title: qsTr("TUN 信息"),
@@ -421,7 +421,10 @@ ApplicationWindow {
                                     required property string title
                                     required property string value
                                     required property string accent
-                                    property string copyValue: value
+                                    property string copyValue: (typeof modelData !== "undefined" && modelData.copyValue !== undefined) ? modelData.copyValue : ""
+                                    property bool isTunCard: title === qsTr("TUN 信息")
+                                    property string effectiveCopyValue: isTunCard ? backend.tunLocalIp : copyValue
+                                    property bool canCopy: effectiveCopyValue.length > 0 || value.length > 0
                                     radius: 10
                                     color: "#151e2f"
                                     border.color: "#243149"
@@ -459,9 +462,15 @@ ApplicationWindow {
 
                                     MouseArea {
                                         anchors.fill: parent
-                                        enabled: value.length > 0
+                                        enabled: canCopy
                                         cursorShape: enabled ? Qt.PointingHandCursor : Qt.ArrowCursor
-                                        onClicked: win.copyBadge(title, copyValue)
+                                        onClicked: {
+                                            if (!canCopy) {
+                                                return;
+                                            }
+                                            const text = effectiveCopyValue.length > 0 ? effectiveCopyValue : value
+                                            win.copyBadge(title, text)
+                                        }
                                     }
                                 }
                             }
