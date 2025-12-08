@@ -1504,6 +1504,9 @@ void Backend::handleChatMessage(uint64_t senderId, const QString &message) {
   }
 
   if (!entry.isSelf && chatReminderEnabled_) {
+    if (!soundNotifier_.isInitialized() && mainWindow_) {
+      soundNotifier_.initialize(mainWindow_);
+    }
     soundNotifier_.playMessageAlert();
     requestUserAttention();
   }
