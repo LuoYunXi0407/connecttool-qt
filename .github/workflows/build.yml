@@ -206,7 +206,7 @@ jobs:
           path: ${{ steps.package.outputs.artifact_dir }}
           if-no-files-found: error
   build-macos:
-    runs-on: macos-13
+    runs-on: macos-15-intel
     name: Build (macOS)
     steps:
       - name: Checkout repository
