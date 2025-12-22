@@ -298,11 +298,19 @@ bool steamClientExistsInHome(const QString &homePath) {
     return false;
   }
   const QDir homeDir(homePath);
-  const QString steamClient64 =
-      homeDir.filePath(QStringLiteral(".steam/sdk64/steamclient.so"));
-  const QString steamClient32 =
-      homeDir.filePath(QStringLiteral(".steam/sdk32/steamclient.so"));
-  return QFileInfo::exists(steamClient64) || QFileInfo::exists(steamClient32);
+  const QStringList candidates = {
+      QStringLiteral(".steam/sdk64/steamclient.so"),
+      QStringLiteral(".steam/sdk32/steamclient.so"),
+      QStringLiteral(".local/share/Steam/linux64/steamclient.so"),
+      QStringLiteral(".local/share/Steam/linux32/steamclient.so"),
+      QStringLiteral(".local/share/Steam/ubuntu12_64/steamclient.so"),
+      QStringLiteral(".local/share/Steam/ubuntu12_32/steamclient.so")};
+  for (const QString &relativePath : candidates) {
+    if (QFileInfo::exists(homeDir.filePath(relativePath))) {
+      return true;
+    }
+  }
+  return false;
 }
 
 bool steamPidIndicatesRunning(const QString &pidPath) {
@@ -361,24 +369,21 @@ void fixSteamEnvForFlatpak() {
     return;
   }
   const QString currentHomePath = QString::fromLocal8Bit(currentHome);
-  const bool currentHasClient = steamClientExistsInHome(currentHomePath);
-  const bool currentRunning = steamRuntimeActiveInHome(currentHomePath);
+  if (steamRuntimeActiveInHome(currentHomePath)) {
+    return;
+  }
 
   const QString flatpakHome =
       QDir(currentHomePath)
           .filePath(QStringLiteral(".var/app/com.valvesoftware.Steam"));
-  const bool flatpakHasClient = steamClientExistsInHome(flatpakHome);
-  if (!flatpakHasClient) {
-    return;
-  }
-
-  const bool flatpakRunning = steamRuntimeActiveInHome(flatpakHome);
-  if (flatpakRunning || (!currentRunning && !currentHasClient)) {
+  if (steamRuntimeActiveInHome(flatpakHome)) {
     qputenv("HOME", flatpakHome.toLocal8Bit());
     return;
   }
 
-  if (!currentRunning) {
+  const bool currentHasClient = steamClientExistsInHome(currentHomePath);
+  const bool flatpakHasClient = steamClientExistsInHome(flatpakHome);
+  if (!currentHasClient && flatpakHasClient) {
     qputenv("HOME", flatpakHome.toLocal8Bit());
   }
 }
