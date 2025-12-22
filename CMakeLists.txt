@@ -38,16 +38,6 @@ set(_steam_include_hints
 
 set(_steam_lib_hints)
 
-if(APPLE)
-    set_target_properties(connecttool-qt PROPERTIES MACOSX_BUNDLE TRUE)
-    set(APP_ICON_MACOS "${CMAKE_SOURCE_DIR}/resources/ConnectTool.icns")
-    set_source_files_properties(${APP_ICON_MACOS}
-        PROPERTIES MACOSX_PACKAGE_LOCATION "Resources")
-    target_sources(connecttool-qt PRIVATE ${APP_ICON_MACOS})
-    set_target_properties(connecttool-qt PROPERTIES
-        MACOSX_BUNDLE_ICON_FILE "ConnectTool.icns")
-endif()
-
 if(WIN32)
     list(APPEND _steam_lib_hints
         ${STEAMWORKS_PATH_HINT}/redistributable_bin/win64
@@ -125,6 +115,16 @@ add_executable(connecttool-qt
     steam/vpn_message_handler.cpp
     steam/steam_vpn_networking_manager.cpp
     steam/steam_vpn_bridge.cpp)
+
+if(APPLE)
+    set_target_properties(connecttool-qt PROPERTIES MACOSX_BUNDLE TRUE)
+    set(APP_ICON_MACOS "${CMAKE_SOURCE_DIR}/resources/ConnectTool.icns")
+    set_source_files_properties(${APP_ICON_MACOS}
+        PROPERTIES MACOSX_PACKAGE_LOCATION "Resources")
+    target_sources(connecttool-qt PRIVATE ${APP_ICON_MACOS})
+    set_target_properties(connecttool-qt PROPERTIES
+        MACOSX_BUNDLE_ICON_FILE "ConnectTool.icns")
+endif()
 
 if(WIN32)
     target_sources(connecttool-qt PRIVATE tun/tun_windows.cpp src/firewall_windows.cpp)
