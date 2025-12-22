@@ -7,13 +7,15 @@ rename-desktop-file: connecttool.desktop
 rename-icon: connecttool-qt
 finish-args:
   - --share=network
+  - --share=ipc
   - --socket=x11
   - --socket=wayland
   - --socket=pulseaudio
+  - --device=dri
   - --filesystem=home
-  - --filesystem=~/.var/app/com.valvesoftware.Steam:ro
-  - --filesystem=~/.steam:ro
-  - --filesystem=xdg-run/steam:ro
+  - --filesystem=~/.var/app/com.valvesoftware.Steam
+  - --filesystem=~/.steam
+  - --filesystem=xdg-run/steam
 modules:
   - name: boost-headers
     buildsystem: simple

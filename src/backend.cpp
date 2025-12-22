@@ -13,6 +13,7 @@
 #include <QDateTime>
 #include <QDesktopServices>
 #include <QDir>
+#include <QFile>
 #include <QFileInfo>
 #include <QGuiApplication>
 #include <QJsonArray>
@@ -287,6 +288,11 @@ void fixSteamEnvForWindows() {
 #endif
 
 #ifdef Q_OS_LINUX
+bool isFlatpakRuntime() {
+  return qEnvironmentVariableIsSet("FLATPAK_ID") ||
+         QFileInfo::exists(QStringLiteral("/run/.flatpak-info"));
+}
+
 bool steamClientExistsInHome(const QString &homePath) {
   if (homePath.isEmpty()) {
     return false;
@@ -299,27 +305,82 @@ bool steamClientExistsInHome(const QString &homePath) {
   return QFileInfo::exists(steamClient64) || QFileInfo::exists(steamClient32);
 }
 
-// Prefer Steam's Flatpak data directory when the standard ~/.steam path is
-// missing (e.g. com.valvesoftware.Steam). This helps SteamAPI_Init locate both
-// steamclient.so and the running client IPC files.
+bool steamPidIndicatesRunning(const QString &pidPath) {
+  QFile pidFile(pidPath);
+  if (!pidFile.open(QIODevice::ReadOnly | QIODevice::Text)) {
+    return false;
+  }
+
+  const QByteArray pidLine = pidFile.readLine().trimmed();
+  if (pidLine.isEmpty()) {
+    return false;
+  }
+
+  bool ok = false;
+  const qint64 pidValue = pidLine.toLongLong(&ok);
+  return ok && pidValue > 0;
+}
+
+bool steamRuntimeActiveInHome(const QString &homePath) {
+  if (homePath.isEmpty()) {
+    return false;
+  }
+
+  const QDir homeDir(homePath);
+  const QStringList pidCandidates = {
+      homeDir.filePath(QStringLiteral(".steam/steam.pid")),
+      homeDir.filePath(QStringLiteral(".steam/root/steam.pid")),
+      homeDir.filePath(QStringLiteral(".local/share/Steam/steam.pid"))};
+  for (const QString &pidPath : pidCandidates) {
+    if (QFileInfo::exists(pidPath) && steamPidIndicatesRunning(pidPath)) {
+      return true;
+    }
+  }
+
+  const QStringList pipeCandidates = {
+      homeDir.filePath(QStringLiteral(".steam/steam.pipe"))};
+  for (const QString &pipePath : pipeCandidates) {
+    if (QFileInfo::exists(pipePath)) {
+      return true;
+    }
+  }
+
+  return false;
+}
+
+// Prefer Steam's Flatpak data directory inside Flatpak when the current home
+// doesn't appear to host a running Steam client. This helps SteamAPI_Init
+// locate both steamclient.so and the running client IPC files.
 void fixSteamEnvForFlatpak() {
+  if (!isFlatpakRuntime()) {
+    return;
+  }
+
   const QByteArray currentHome = qgetenv("HOME");
   if (currentHome.isEmpty()) {
     return;
   }
   const QString currentHomePath = QString::fromLocal8Bit(currentHome);
-  if (steamClientExistsInHome(currentHomePath)) {
-    return;
-  }
+  const bool currentHasClient = steamClientExistsInHome(currentHomePath);
+  const bool currentRunning = steamRuntimeActiveInHome(currentHomePath);
 
   const QString flatpakHome =
       QDir(currentHomePath)
           .filePath(QStringLiteral(".var/app/com.valvesoftware.Steam"));
-  if (!steamClientExistsInHome(flatpakHome)) {
+  const bool flatpakHasClient = steamClientExistsInHome(flatpakHome);
+  if (!flatpakHasClient) {
     return;
   }
 
-  qputenv("HOME", flatpakHome.toLocal8Bit());
+  const bool flatpakRunning = steamRuntimeActiveInHome(flatpakHome);
+  if (flatpakRunning || (!currentRunning && !currentHasClient)) {
+    qputenv("HOME", flatpakHome.toLocal8Bit());
+    return;
+  }
+
+  if (!currentRunning) {
+    qputenv("HOME", flatpakHome.toLocal8Bit());
+  }
 }
 
 // When the app is launched with sudo while Steam runs under a normal user,
