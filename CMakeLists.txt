@@ -127,7 +127,10 @@ if(APPLE)
 endif()
 
 if(WIN32)
-    target_sources(connecttool-qt PRIVATE tun/tun_windows.cpp src/firewall_windows.cpp)
+    target_sources(connecttool-qt PRIVATE
+        tun/tun_windows.cpp
+        src/firewall_windows.cpp
+        resources/connecttool.rc)
 elseif(APPLE)
     target_sources(connecttool-qt PRIVATE tun/tun_macos.cpp)
 else()
@@ -257,4 +260,8 @@ else()
     install(FILES ${CMAKE_CURRENT_BINARY_DIR}/steam_appid.txt DESTINATION bin)
     install(TARGETS connecttool-qt RUNTIME DESTINATION bin)
     install(FILES ${STEAMWORKS_RUNTIME_LIBRARIES} DESTINATION bin OPTIONAL)
+endif()
+if(UNIX AND NOT APPLE)
+    install(FILES resources/connecttool.desktop DESTINATION share/applications)
+    install(FILES resources/connecttool-qt.png DESTINATION share/icons/hicolor/256x256/apps)
 endif()

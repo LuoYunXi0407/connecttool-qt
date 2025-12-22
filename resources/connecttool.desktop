@@ -1,0 +1,9 @@
+[Desktop Entry]
+Name=ConnectTool
+Comment=Steam P2P tunnel and room utility
+Exec=connecttool-qt
+Icon=connecttool-qt
+Terminal=false
+Type=Application
+Categories=Network;Utility;
+StartupNotify=true

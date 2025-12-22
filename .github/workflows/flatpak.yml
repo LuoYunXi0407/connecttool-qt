@@ -1,0 +1,70 @@
+name: Build Flatpak
+on:
+  push:
+    tags:
+      - "v*"
+    paths-ignore:
+      - "docs/**"
+      - "README.md"
+      - ".github/ISSUE_TEMPLATE/**"
+  workflow_dispatch:
+permissions:
+  contents: write
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+env:
+  FLATPAK_APP_ID: io.github.moeleak.connecttool-qt
+  FLATPAK_RUNTIME: org.kde.Platform
+  FLATPAK_SDK: org.kde.Sdk
+  FLATPAK_RUNTIME_VERSION: "6.10"
+jobs:
+  flatpak:
+    runs-on: ubuntu-latest
+    name: Build (Flatpak)
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+      - name: Install Flatpak tooling
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y flatpak flatpak-builder
+          sudo flatpak remote-add --if-not-exists flathub https://flathub.org/repo/flathub.flatpakrepo
+          sudo flatpak install -y flathub \
+            "${FLATPAK_RUNTIME}//${FLATPAK_RUNTIME_VERSION}" \
+            "${FLATPAK_SDK}//${FLATPAK_RUNTIME_VERSION}"
+      - name: Download Steamworks SDK
+        shell: bash
+        run: |
+          set -euo pipefail
+          SDK_URL="${{ secrets.STEAMWORKS_SDK_URL }}"
+          if [[ -z "$SDK_URL" ]]; then
+            echo "::error::STEAMWORKS_SDK_URL secret not set"
+            exit 1
+          fi
+          rm -rf packaging/flatpak/steamworks steamworks_temp steamworks_sdk.zip
+          curl -fSLo steamworks_sdk.zip "$SDK_URL"
+          unzip -q steamworks_sdk.zip -d steamworks_temp
+          mkdir -p packaging/flatpak/steamworks
+          if [[ -d "steamworks_temp/sdk" ]]; then
+            cp -R steamworks_temp/sdk/. packaging/flatpak/steamworks/
+          else
+            cp -R steamworks_temp/. packaging/flatpak/steamworks/
+          fi
+          rm -rf steamworks_sdk.zip steamworks_temp
+      - name: Build Flatpak bundle
+        shell: bash
+        run: |
+          set -euo pipefail
+          flatpak-builder --force-clean --repo=repo build-dir \
+            packaging/flatpak/io.github.moeleak.connecttool-qt.yml
+          flatpak build-bundle repo connecttool-qt.flatpak "${FLATPAK_APP_ID}" \
+            --runtime-repo=https://flathub.org/repo/flathub.flatpakrepo
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: connecttool-qt-flatpak
+          path: connecttool-qt.flatpak
+          if-no-files-found: error
