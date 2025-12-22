@@ -440,32 +440,46 @@ jobs:
             echo "::error::Steamworks redistributable not found at $lib"
             exit 1
           fi
-      - name: Download linuxdeploy
+      - name: Configure CMake (Linux)
         shell: bash
         run: |
           set -euo pipefail
-          mkdir -p "$HOME/.local/bin"
-          curl -fSLo "$HOME/.local/bin/linuxdeploy" \
-            https://github.com/linuxdeploy/linuxdeploy/releases/download/continuous/linuxdeploy-x86_64.AppImage
-          curl -fSLo "$HOME/.local/bin/linuxdeploy-plugin-qt" \
-            https://github.com/linuxdeploy/linuxdeploy-plugin-qt/releases/download/continuous/linuxdeploy-plugin-qt-x86_64.AppImage
-          chmod +x "$HOME/.local/bin/linuxdeploy" "$HOME/.local/bin/linuxdeploy-plugin-qt"
-          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+          cmake -S . -B build -G Ninja \
+            -DCMAKE_BUILD_TYPE="${{ env.BUILD_TYPE }}" \
+            -DCMAKE_INSTALL_PREFIX=/usr
+      - name: Build (Linux)
+        run: cmake --build build --config ${{ env.BUILD_TYPE }} --parallel
+      - name: Install (Linux)
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -rf AppDir
+          DESTDIR="$PWD/AppDir" cmake --install build --config ${{ env.BUILD_TYPE }}
+      - name: Install linuxdeploy
+        uses: pcolby/install-linuxdeploy@v1
+        with:
+          plugins: qt appimage
       - name: Build AppImage
         shell: bash
         env:
           QML_SOURCES_PATHS: ${{ github.workspace }}/qml
+          EXTRA_PLATFORM_PLUGINS: libqwayland-generic.so
+          EXTRA_QT_MODULES: waylandcompositor
         run: |
           set -euo pipefail
-          packaging/appimage/build.sh
+          appdir="${{ github.workspace }}/AppDir"
+          linuxdeploy="${{ runner.temp }}/linuxdeploy/linuxdeploy-x86_64.AppImage"
+          "$linuxdeploy" --appdir "$appdir" --plugin qt --output appimage \
+            --desktop-file "${{ github.workspace }}/resources/connecttool.desktop" \
+            --icon-file "${{ github.workspace }}/resources/connecttool-qt.png"
       - name: Collect AppImage
         id: package
         shell: bash
         run: |
           set -euo pipefail
-          appimage=(packaging/appimage/*.AppImage)
+          appimage=("${{ github.workspace }}"/*.AppImage)
           if (( ${#appimage[@]} == 0 )); then
-            echo "::error::No AppImage produced in packaging/appimage"
+            echo "::error::No AppImage produced in workspace"
             exit 1
           fi
           mkdir -p dist
