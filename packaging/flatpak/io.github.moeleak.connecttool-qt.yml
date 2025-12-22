@@ -15,6 +15,15 @@ finish-args:
   - --filesystem=~/.steam:ro
   - --filesystem=xdg-run/steam:ro
 modules:
+  - name: boost-headers
+    buildsystem: simple
+    build-commands:
+      - install -d /app/include
+      - cp -R boost /app/include/
+    sources:
+      - type: archive
+        url: https://boostorg.jfrog.io/artifactory/main/release/1.84.0/source/boost_1_84_0.tar.gz
+        sha256: 1c162b579a423fa6876c6c5bc16d39ab4bc05e28898977a0a6af345f523f6357
   - name: connecttool-qt
     buildsystem: cmake-ninja
     config-opts:
