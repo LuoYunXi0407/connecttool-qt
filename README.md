@@ -15,7 +15,7 @@ connecttool-qt 是一款基于 connecttool
 
 ## 交流群
 
-- connecttool-qt 交流群：902943118（[点此加入](https://qm.qq.com/q/aXlMOBDbJm)）
+- connecttool-qt 交流群：Discord（[点此加入](https://discord.gg/PeRutfW6NA)）
 - ConnectTool 总群：616325806（[点此加入](https://qm.qq.com/q/hgAZJYasbS)）
 
 ## 特性
