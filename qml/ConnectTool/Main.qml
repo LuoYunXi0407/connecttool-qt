@@ -494,6 +494,13 @@ ApplicationWindow {
                                 to: 65535
                                 value: backend.localPort
                                 editable: true
+                                textFromValue: function(value, locale) {
+                                    return value.toString()
+                                }
+                                valueFromText: function(text, locale) {
+                                    const parsed = parseInt(text, 10)
+                                    return isNaN(parsed) ? value : parsed
+                                }
                                 enabled: backend.connectionMode === 0 && !(backend.isHost || backend.isConnected)
                                 onValueChanged: backend.localPort = value
                             }
@@ -511,6 +518,13 @@ ApplicationWindow {
                                 to: 65535
                                 value: backend.localBindPort
                                 editable: true
+                                textFromValue: function(value, locale) {
+                                    return value.toString()
+                                }
+                                valueFromText: function(text, locale) {
+                                    const parsed = parseInt(text, 10)
+                                    return isNaN(parsed) ? value : parsed
+                                }
                                 enabled: backend.connectionMode === 0 && !(backend.isHost || backend.isConnected)
                                 onValueChanged: backend.localBindPort = value
                             }

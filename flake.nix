@@ -28,18 +28,20 @@
           steamworksSdkEnv = builtins.getEnv "STEAMWORKS_SDK_DIR";
           steamworksEnvPath =
             if steamworksEnv != "" then
-              builtins.path {
-                path = steamworksEnv;
-                name = "steamworks-hint";
-              }
+              builtins.path
+                {
+                  path = steamworksEnv;
+                  name = "steamworks-hint";
+                }
             else
               null;
           steamworksSdkEnvPath =
             if steamworksSdkEnv != "" then
-              builtins.path {
-                path = steamworksSdkEnv;
-                name = "steamworks-sdk";
-              }
+              builtins.path
+                {
+                  path = steamworksSdkEnv;
+                  name = "steamworks-sdk";
+                }
             else
               null;
           steamworksHint =
@@ -60,7 +62,7 @@
         {
           default = pkgs.stdenv.mkDerivation rec {
             pname = "connecttool-qt";
-            version = "1.5.13";
+            version = "1.5.14";
             dontWrapQtApps = pkgs.stdenv.isDarwin;
 
             # Keep entire working tree (including untracked) so new sources are present.
