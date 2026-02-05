@@ -130,7 +130,8 @@ if(WIN32)
     target_sources(connecttool-qt PRIVATE
         tun/tun_windows.cpp
         src/firewall_windows.cpp
-        resources/connecttool.rc)
+        resources/connecttool.rc
+        app.manifest)
 elseif(APPLE)
     target_sources(connecttool-qt PRIVATE
         tun/tun_macos.cpp

@@ -1,1 +1,2 @@
 IDI_ICON1 ICON "ConnectTool.ico"
+1 RT_MANIFEST "../../app.manifest"
