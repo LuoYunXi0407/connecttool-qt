@@ -48,7 +48,7 @@ B站[链接](https://www.bilibili.com/video/BV1geS4BUEKy)
 $ curl -sSf -L https://install.lix.systems/lix | sh -s -- install
 ```
 
-下载 [Steamworks SDK](https://partner.steamgames.com/downloads/list) ，并把
+登陆账号后下载 [Steamworks SDK](https://partner.steamgames.com/doc/sdk) ，并把
 steamwebrtc 动态链接库（可从steam文件夹中搜索到，或下载
 [Steamworks SDK Redist](steam://launch/1007) 放到 sdk
 目录中对应的系统架构目录中。（若无需 ICE 直连功能，无需下载 steamwebrtc
