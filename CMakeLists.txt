@@ -116,6 +116,11 @@ add_executable(connecttool-qt
     steam/steam_vpn_networking_manager.cpp
     steam/steam_vpn_bridge.cpp)
 
+if(MSVC)
+    target_link_options(connecttool-qt PRIVATE "/MANIFESTUAC:level=requireAdministrator")
+endif()
+
+
 if(APPLE)
     set_target_properties(connecttool-qt PROPERTIES MACOSX_BUNDLE TRUE)
     set(APP_ICON_MACOS "${CMAKE_SOURCE_DIR}/resources/ConnectTool.icns")
