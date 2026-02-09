@@ -116,9 +116,7 @@ add_executable(connecttool-qt
     steam/steam_vpn_networking_manager.cpp
     steam/steam_vpn_bridge.cpp)
 
-if(MSVC)
-    target_link_options(connecttool-qt PRIVATE "/MANIFESTUAC:level=requireAdministrator")
-endif()
+
 
 
 if(APPLE)
@@ -135,7 +133,8 @@ if(WIN32)
     target_sources(connecttool-qt PRIVATE
         tun/tun_windows.cpp
         src/firewall_windows.cpp
-        resources/connecttool.rc)
+        resources/connecttool.rc
+		resources/app.manifest)
 elseif(APPLE)
     target_sources(connecttool-qt PRIVATE
         tun/tun_macos.cpp
